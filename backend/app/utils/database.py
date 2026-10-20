@@ -14,6 +14,9 @@ USUARIOS_DEMO = [
 
 def crear_indices(db) -> None:
     db.usuarios.create_index([("email", ASCENDING)], unique=True, name="uq_usuarios_email")
+    db.turnos.create_index(
+        [("paciente_id", ASCENDING), ("fecha_hora", ASCENDING)], name="ix_turnos_paciente_fecha"
+        )
 
 
 def seed_usuarios(db) -> int:
