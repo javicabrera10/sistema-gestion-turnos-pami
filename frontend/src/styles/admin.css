@@ -1,0 +1,122 @@
+.adm {
+  --azul: #0056b3;
+  --azul-oscuro: #003d80;
+  --azul-claro: #e8f1fb;
+  --amarillo: #f5b400;
+  --verde: #1b7a3a;
+  --rojo: #b00020;
+  --borde: #d9e2ee;
+  --sombra: 0 2px 10px rgba(0, 40, 90, 0.08);
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eaf2fc 0, #f4f7fb 260px);
+  color: #1d2733;
+}
+
+/* Barra superior */
+.adm-barra {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: 0.75rem 1.5rem; background: var(--azul); color: #fff; box-shadow: var(--sombra);
+}
+.adm-marca { display: flex; align-items: center; gap: 0.75rem; }
+.adm-marca div { display: flex; flex-direction: column; line-height: 1.15; }
+.adm-marca strong { font-size: 1.4rem; letter-spacing: 0.04em; }
+.adm-marca span { font-size: 0.85rem; opacity: 0.9; }
+.adm-logo {
+  width: 34px; height: 34px; border-radius: 50%; background: #fff;
+  border: 7px solid var(--amarillo); box-sizing: border-box; position: relative;
+}
+.adm-logo::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: var(--azul); }
+.adm-usuario { display: flex; align-items: center; gap: 0.75rem; }
+.adm-usuario .adm-boton { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.7); }
+.adm-usuario .adm-boton:hover { background: rgba(255, 255, 255, 0.15); }
+
+.adm-contenido { max-width: 980px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.adm-contenido h1 { margin: 0; font-size: 1.8rem; color: var(--azul-oscuro); }
+.adm-sub { margin: 0.25rem 0 1.25rem; color: #51606f; }
+
+/* Botones */
+.adm-boton {
+  font: inherit; font-weight: 600; padding: 0.55rem 1rem; border-radius: 10px; cursor: pointer;
+  border: 2px solid var(--azul); background: #fff; color: var(--azul); transition: background 0.15s, transform 0.05s;
+}
+.adm-boton:hover:not(:disabled) { background: var(--azul-claro); }
+.adm-boton:active:not(:disabled) { transform: translateY(1px); }
+.adm-boton:disabled { opacity: 0.55; cursor: not-allowed; }
+.adm-boton--primario { background: var(--azul); color: #fff; }
+.adm-boton--primario:hover:not(:disabled) { background: var(--azul-oscuro); }
+.adm button:focus-visible, .adm select:focus-visible, .adm input:focus-visible { outline: 3px solid var(--amarillo); outline-offset: 2px; }
+
+/* Resumen */
+.adm-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+.adm-tarjeta {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; text-align: left; font: inherit;
+  padding: 0.9rem 1rem; background: #fff; border: 2px solid transparent; border-left: 6px solid var(--c, var(--azul));
+  border-radius: 14px; box-shadow: var(--sombra); cursor: pointer;
+}
+.adm-tarjeta--solicitado { --c: var(--amarillo); }
+.adm-tarjeta--otorgado { --c: var(--azul); }
+.adm-tarjeta--confirmado { --c: var(--verde); }
+.adm-tarjeta--rechazado { --c: var(--rojo); }
+.adm-tarjeta--activa { border-color: var(--c); }
+.adm-numero { font-size: 2.1rem; font-weight: 800; line-height: 1; color: var(--c); }
+.adm-tarjeta-label { font-weight: 700; }
+.adm-tarjeta-ayuda { font-size: 0.82rem; color: #5c6b7a; }
+
+/* Filtros */
+.adm-filtros { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+.adm-filtro {
+  font: inherit; font-weight: 600; padding: 0.45rem 1rem; border-radius: 999px; cursor: pointer;
+  border: 2px solid var(--borde); background: #fff; color: #3b4a5a;
+}
+.adm-filtro--activo { background: var(--azul); border-color: var(--azul); color: #fff; }
+.adm-actualizar { margin-left: auto; }
+
+/* Mensajes */
+.adm-exito, .adm-error, .adm-aviso { border-radius: 10px; padding: 0.7rem 1rem; margin: 0 0 1rem; }
+.adm-exito { background: #e3f5e8; border: 1px solid var(--verde); color: #14502a; }
+.adm-error { background: #fdeaed; border: 1px solid var(--rojo); color: #7d0017; }
+.adm-aviso { background: #fff6dc; border: 1px solid #d9a400; color: #5e4700; }
+.adm-vacio { text-align: center; padding: 2.5rem 1rem; background: #fff; border-radius: 14px; border: 2px dashed var(--borde); color: #5c6b7a; }
+.adm-vacio span { font-size: 2.5rem; }
+
+/* Lista de turnos */
+.adm-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.adm-turno { background: #fff; border-radius: 16px; padding: 1.1rem 1.25rem; box-shadow: var(--sombra); border: 1px solid var(--borde); }
+.adm-turno-cabecera { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.9rem; }
+.adm-avatar {
+  flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--azul-claro); color: var(--azul);
+  display: grid; place-items: center; font-weight: 800;
+}
+.adm-turno-paciente { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.adm-turno-paciente strong { font-size: 1.1rem; }
+.adm-turno-paciente span { font-size: 0.9rem; color: #5c6b7a; }
+
+.adm-badge { flex: none; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem; font-weight: 700; }
+.adm-badge--solicitado { background: #fff1c2; color: #7a5a00; }
+.adm-badge--otorgado { background: #dcebfb; color: var(--azul-oscuro); }
+.adm-badge--confirmado { background: #ddf3e4; color: #14502a; }
+.adm-badge--rechazado, .adm-badge--cancelado { background: #fbe0e5; color: #7d0017; }
+.adm-badge--reprogramado { background: #ece4f7; color: #4b2a85; }
+
+.adm-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem 1.25rem; margin: 0 0 1rem; }
+.adm-datos dt { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6a7886; }
+.adm-datos dd { margin: 0.1rem 0 0; font-weight: 600; }
+.adm-dato-ancho { grid-column: 1 / -1; }
+.adm-dato-ancho dd { font-weight: 400; }
+
+/* Panel para otorgar */
+.adm-otorgar { background: var(--azul-claro); border-radius: 12px; padding: 1rem; border: 1px solid #c3d8f1; }
+.adm-otorgar-titulo { margin: 0 0 0.75rem; font-weight: 700; color: var(--azul-oscuro); }
+.adm-otorgar-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; }
+.adm-otorgar label { display: grid; gap: 0.3rem; font-size: 0.9rem; font-weight: 600; }
+.adm-otorgar select, .adm-otorgar input {
+  font: inherit; padding: 0.55rem; border-radius: 8px; border: 2px solid #9db8d8; background: #fff;
+}
+.adm-otorgar-botones { display: flex; gap: 0.6rem; margin-top: 0.9rem; flex-wrap: wrap; }
+.adm-otorgar .adm-aviso, .adm-otorgar .adm-error { margin: 0.75rem 0 0; }
+
+@media (max-width: 520px) {
+  .adm-barra { padding: 0.75rem 1rem; }
+  .adm-actualizar { margin-left: 0; }
+  .adm-turno-cabecera { flex-wrap: wrap; }
+}

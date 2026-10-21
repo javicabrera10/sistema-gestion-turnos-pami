@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import MedicoRecetas from './pages/MedicoRecetas';
 import SolicitarTurno from './pages/SolicitarTurno';
+import AdminTurnos from './pages/AdminTurnos';
 
 const DashboardPaciente = () => (
   <div>
@@ -11,7 +12,6 @@ const DashboardPaciente = () => (
     <p><Link to="/paciente/turnos/nuevo">Pedir un turno</Link></p>
   </div>
 );
-const DashboardAdmin = () => <div>Dashboard Administrativo (Javier)</div>;
 
 function App() {
   return (
@@ -22,7 +22,7 @@ function App() {
           <Route path="/paciente" element={<ProtectedRoute allowedRoles={['paciente']}><DashboardPaciente /></ProtectedRoute>} />
           <Route path="/paciente/turnos/nuevo" element={<ProtectedRoute allowedRoles={['paciente']}><SolicitarTurno /></ProtectedRoute>} />
           <Route path="/medico" element={<ProtectedRoute allowedRoles={['medico']}><MedicoRecetas /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute allowedRoles={['administrativo']}><DashboardAdmin /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['administrativo']}><AdminTurnos /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
