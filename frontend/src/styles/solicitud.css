@@ -1,0 +1,40 @@
+/* Pensado para adultos mayores: texto grande, alto contraste, botones amplios */
+.sol-pagina { max-width: 640px; margin: 0 auto; padding: 1rem 1rem 3rem; font-size: 1.2rem; line-height: 1.5; }
+.sol-pagina h1 { font-size: 2rem; margin: 0.5rem 0 1rem; }
+.sol-pagina h2 { font-size: 1.4rem; margin: 0 0 0.75rem; }
+
+.sol-pagina button, .sol-link {
+  min-height: 56px; padding: 0.75rem 1.25rem; font-size: 1.15rem; font-weight: 600;
+  border-radius: 12px; border: 2px solid transparent;
+}
+.sol-pagina button:focus-visible, .sol-link:focus-visible,
+.sol-form select:focus-visible, .sol-form input:focus-visible, .sol-form textarea:focus-visible {
+  outline: 4px solid #ffb300; outline-offset: 2px;
+}
+.sol-pagina button:disabled { opacity: 0.5; cursor: not-allowed; }
+.sol-link { display: inline-flex; align-items: center; color: var(--primary-color); text-decoration: underline; padding-left: 0; }
+
+.sol-voz { background: #fff; border: 2px solid var(--primary-color); border-radius: 16px; padding: 1rem 1.25rem 1.25rem; margin-bottom: 1.5rem; }
+.sol-estado { display: flex; align-items: center; gap: 0.75rem; font-size: 1.3rem; font-weight: 700; padding: 0.75rem 1rem; border-radius: 12px; background: #eef3fa; margin-bottom: 0.75rem; }
+.sol-punto { width: 18px; height: 18px; border-radius: 50%; background: #8a99ad; flex: none; }
+.sol-estado--hablando .sol-punto { background: var(--primary-color); animation: sol-pulso 1s infinite; }
+.sol-estado--escuchando { background: #e6f6ea; }
+.sol-estado--escuchando .sol-punto { background: #1b8a3a; animation: sol-pulso 0.7s infinite; }
+.sol-estado--enviando .sol-punto { background: #b36b00; }
+@keyframes sol-pulso { 50% { transform: scale(1.5); opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) { .sol-punto { animation: none !important; } }
+
+.sol-subtitulo { font-style: italic; margin: 0.5rem 0; }
+.sol-ayuda { font-size: 1rem; color: #555; margin-bottom: 0; }
+
+.sol-form { display: grid; gap: 1rem; }
+.sol-form label { display: grid; gap: 0.4rem; font-weight: 600; }
+.sol-form select, .sol-form input, .sol-form textarea {
+  font-size: 1.2rem; padding: 0.7rem; border: 2px solid #8a99ad; border-radius: 10px; font-family: inherit; font-weight: 400;
+}
+
+.sol-principal { background: var(--primary-color); color: #fff; width: 100%; min-height: 64px !important; font-size: 1.25rem !important; }
+.sol-peligro { background: #b00020; color: #fff; width: 100%; }
+.sol-alerta { background: #fff4d6; border: 2px solid #b36b00; border-radius: 12px; padding: 0.75rem 1rem; margin: 0.5rem 0; }
+.sol-ok { background: #e6f6ea; border: 2px solid #1b6e34; border-radius: 12px; padding: 1rem; }
+.sol-acciones { display: grid; gap: 0.75rem; margin-top: 1rem; }
