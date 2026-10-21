@@ -1,17 +1,14 @@
-﻿import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+﻿import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
-import MedicoRecetas from './pages/MedicoRecetas';
+import PacienteInicio from './pages/PacienteInicio';
+import MisTurnos from './pages/MisTurnos';
 import SolicitarTurno from './pages/SolicitarTurno';
+import MedicoRecetas from './pages/MedicoRecetas';
 import AdminTurnos from './pages/AdminTurnos';
 
-const DashboardPaciente = () => (
-  <div>
-    Dashboard Paciente (Javier)
-    <p><Link to="/paciente/turnos/nuevo">Pedir un turno</Link></p>
-  </div>
-);
+const soloPaciente = (pagina) => <ProtectedRoute allowedRoles={['paciente']}>{pagina}</ProtectedRoute>;
 
 function App() {
   return (
@@ -19,8 +16,9 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/paciente" element={<ProtectedRoute allowedRoles={['paciente']}><DashboardPaciente /></ProtectedRoute>} />
-          <Route path="/paciente/turnos/nuevo" element={<ProtectedRoute allowedRoles={['paciente']}><SolicitarTurno /></ProtectedRoute>} />
+          <Route path="/paciente" element={soloPaciente(<PacienteInicio />)} />
+          <Route path="/paciente/turnos" element={soloPaciente(<MisTurnos />)} />
+          <Route path="/paciente/turnos/nuevo" element={soloPaciente(<SolicitarTurno />)} />
           <Route path="/medico" element={<ProtectedRoute allowedRoles={['medico']}><MedicoRecetas /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['administrativo']}><AdminTurnos /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/login" replace />} />

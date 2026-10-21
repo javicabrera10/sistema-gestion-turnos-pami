@@ -1,0 +1,63 @@
+/* Pantallas del paciente: texto grande y botones amplios */
+.pac {
+  --azul: #0056b3; --azul-oscuro: #003d80; --azul-claro: #e8f1fb; --amarillo: #f5b400;
+  --verde: #1b6e34; --rojo: #b00020; --borde: #d9e2ee; --sombra: 0 2px 10px rgba(0, 40, 90, 0.08);
+  min-height: 100vh; background: linear-gradient(180deg, #eaf2fc 0, #f4f7fb 260px); color: #1d2733; font-size: 1.15rem;
+}
+.pac-barra { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.75rem 1.25rem; background: var(--azul); color: #fff; box-shadow: var(--sombra); }
+.pac-marca { display: flex; align-items: center; gap: 0.6rem; color: #fff; text-decoration: none; font-size: 1.4rem; letter-spacing: 0.04em; }
+.pac-logo { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 7px solid var(--amarillo); box-sizing: border-box; position: relative; }
+.pac-logo::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: var(--azul); }
+.pac-usuario { display: flex; align-items: center; gap: 0.75rem; }
+
+.pac-contenido { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.pac-contenido h1 { margin: 0.25rem 0 0.5rem; font-size: 2rem; color: var(--azul-oscuro); }
+.pac-sub { margin: 0 0 1.25rem; color: #51606f; font-size: 1.2rem; }
+.pac-volver { color: var(--azul); font-weight: 600; text-decoration: underline; }
+
+.pac-boton {
+  display: inline-flex; align-items: center; justify-content: center; font: inherit; font-weight: 700; text-decoration: none;
+  min-height: 56px; padding: 0.7rem 1.4rem; border-radius: 12px; cursor: pointer; border: 2px solid var(--azul); background: #fff; color: var(--azul);
+}
+.pac-boton:disabled { opacity: 0.55; cursor: not-allowed; }
+.pac-boton--primario { background: var(--azul); color: #fff; }
+.pac-boton--aceptar { background: var(--verde); border-color: var(--verde); color: #fff; }
+.pac-boton--rechazar { background: #fff; border-color: var(--rojo); color: var(--rojo); }
+.pac-boton--claro { min-height: 44px; background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.7); }
+.pac a:focus-visible, .pac button:focus-visible { outline: 4px solid var(--amarillo); outline-offset: 2px; }
+
+/* Inicio */
+.pac-menu { display: grid; gap: 1rem; margin-top: 1rem; }
+.pac-opcion {
+  display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: #fff; border-radius: 18px; border: 2px solid var(--borde);
+  box-shadow: var(--sombra); text-decoration: none; color: inherit;
+}
+.pac-opcion:hover { border-color: var(--azul); }
+.pac-opcion strong { display: block; font-size: 1.4rem; color: var(--azul-oscuro); }
+.pac-opcion small { display: block; font-size: 1rem; color: #5c6b7a; margin-top: 0.15rem; }
+.pac-icono { flex: none; width: 64px; height: 64px; border-radius: 16px; background: var(--azul-claro); display: grid; place-items: center; font-size: 2rem; }
+.pac-alerta-turno { display: block; padding: 1rem 1.25rem; border-radius: 14px; background: #fff4d6; border: 2px solid #d9a400; color: #5e4700; text-decoration: none; margin-bottom: 0.5rem; }
+
+/* Mis turnos */
+.pac-aviso { background: #fff4d6; border: 2px solid #d9a400; border-radius: 12px; padding: 0.8rem 1rem; }
+.pac-ok { background: #e3f5e8; border: 2px solid var(--verde); border-radius: 12px; padding: 0.8rem 1rem; }
+.pac-error { background: #fdeaed; border: 2px solid var(--rojo); border-radius: 12px; padding: 0.8rem 1rem; }
+.pac-vacio { text-align: center; background: #fff; border: 2px dashed var(--borde); border-radius: 16px; padding: 2rem 1rem; }
+.pac-lista { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 1rem; }
+.pac-turno { background: #fff; border-radius: 18px; padding: 1.1rem 1.25rem; box-shadow: var(--sombra); border: 2px solid var(--borde); border-left: 8px solid var(--c, var(--borde)); }
+.pac-turno--otorgado { --c: var(--amarillo); }
+.pac-turno--confirmado { --c: var(--verde); }
+.pac-turno--rechazado, .pac-turno--cancelado { --c: var(--rojo); }
+.pac-turno--solicitado { --c: var(--azul); }
+.pac-turno-fila { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap; }
+.pac-turno h2 { margin: 0; font-size: 1.5rem; color: var(--azul-oscuro); }
+.pac-fecha { margin: 0.4rem 0 0; font-size: 1.25rem; font-weight: 700; }
+.pac-motivo { margin: 0.2rem 0 0.8rem; color: #51606f; }
+.pac-badge { padding: 0.25rem 0.8rem; border-radius: 999px; font-size: 0.95rem; font-weight: 700; background: #eef3fa; color: var(--azul-oscuro); }
+.pac-badge--otorgado { background: #fff1c2; color: #7a5a00; }
+.pac-badge--confirmado { background: #ddf3e4; color: #14502a; }
+.pac-badge--rechazado, .pac-badge--cancelado { background: #fbe0e5; color: #7d0017; }
+.pac-acciones { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.pac-acciones .pac-boton { flex: 1 1 180px; }
+.pac-confirmar { background: #fdeaed; border-radius: 12px; padding: 0.9rem 1rem; }
+.pac-confirmar p { margin: 0 0 0.75rem; font-weight: 700; }
