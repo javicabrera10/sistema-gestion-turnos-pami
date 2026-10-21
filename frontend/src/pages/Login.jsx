@@ -2,6 +2,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+const RUTA_POR_ROL = {
+  paciente: '/paciente',
+  medico: '/medico',
+  administrativo: '/admin',
+};
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,22 +20,8 @@ export default function Login() {
     setError('');
     
     try {
-      // login() del AuthContext devuelve los datos del usuario
-      // (Asumimos que el backend devuelve el rol en la respuesta)
-      await login(email, password); 
-      
-      // Como el AuthContext actualiza el usuario de forma asíncrona,
-      // podemos redirigir basándonos en el email o forzando un pequeño timeout.
-      // Para simplificar ahora: si es medico@pamiapp.com, vamos a /medico
-      
-      if (email === 'medico@pamiapp.com') {
-        navigate('/medico');
-      } else if (email === 'admin@pamiapp.com') {
-        navigate('/admin');
-      } else {
-        navigate('/paciente');
-      }
-
+      const usuario = await login(email, password);
+      navigate(RUTA_POR_ROL[usuario.rol] ?? '/login');
     } catch (err) {
       setError(err.message);
     }
