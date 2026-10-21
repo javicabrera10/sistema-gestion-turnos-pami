@@ -1,3 +1,4 @@
+from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
 from .base import BaseRepository
@@ -22,6 +23,10 @@ class UsuarioRepository(BaseRepository):
 
     def listar(self):
         return list(self.col.find({}, {"password_hash": 0}))
+
+    def buscar_por_ids(self, ids):
+        oids = [ObjectId(i) for i in ids]
+        return list(self.col.find({"_id": {"$in": oids}}, {"password_hash": 0}))
 
     def registrar_fallo(self, id_, intentos: int, bloqueado_hasta=None):
         self.update(id_, {"intentos_fallidos": intentos, "bloqueado_hasta": bloqueado_hasta})
