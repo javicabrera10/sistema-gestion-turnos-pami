@@ -20,7 +20,7 @@ export const api = {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Error en la petición');
+      throw new Error(error.error || error.message || 'Error en la petición');
     }
 
     return response.json();
