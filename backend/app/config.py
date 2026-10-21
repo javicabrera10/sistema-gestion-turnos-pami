@@ -8,7 +8,7 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=30)
     MONGO_URI = os.getenv("MONGO_URI", "mongodb://127.0.0.1:27017")
     MONGO_DB = os.getenv("MONGO_DB", "pami_db")
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
     RATELIMIT_STORAGE_URI = "memory://"
 
 

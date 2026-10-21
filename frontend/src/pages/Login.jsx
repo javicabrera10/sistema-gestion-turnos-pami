@@ -11,9 +11,25 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    
     try {
-      await login(email, password);
-      navigate('/');
+      // login() del AuthContext devuelve los datos del usuario
+      // (Asumimos que el backend devuelve el rol en la respuesta)
+      await login(email, password); 
+      
+      // Como el AuthContext actualiza el usuario de forma asíncrona,
+      // podemos redirigir basándonos en el email o forzando un pequeño timeout.
+      // Para simplificar ahora: si es medico@pamiapp.com, vamos a /medico
+      
+      if (email === 'medico@pamiapp.com') {
+        navigate('/medico');
+      } else if (email === 'admin@pamiapp.com') {
+        navigate('/admin');
+      } else {
+        navigate('/paciente');
+      }
+
     } catch (err) {
       setError(err.message);
     }
