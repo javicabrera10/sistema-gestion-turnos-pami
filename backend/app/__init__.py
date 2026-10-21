@@ -25,11 +25,13 @@ def create_app(config_class=Config, db=None):
     from .routes.health import health_bp
     from .routes.usuarios import usuarios_bp
     from .routes.turnos import turnos_bp
+    from .routes.turnos_admin import turnos_admin_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
     app.register_blueprint(turnos_bp, url_prefix="/api/turnos")
+    app.register_blueprint(turnos_admin_bp, url_prefix="/api/turnos")
 
     @app.errorhandler(ValidationError)
     def datos_invalidos(e):
