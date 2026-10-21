@@ -1,0 +1,18 @@
+﻿:root {
+  --font-size-base: 16px;
+  --bg-color: #f4f4f9;
+  --text-color: #333;
+  --primary-color: #0056b3;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: var(--font-size-base);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+button {
+  padding: 10px;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+}
