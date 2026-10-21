@@ -24,3 +24,18 @@ class TurnoRepository(BaseRepository):
 
     def actualizar_estado(self, id_, estado: EstadoTurno):
         self.update(id_, {"estado": estado.value})
+
+    def listar(self, estado: EstadoTurno | None = None):
+        filtro = {"estado": estado.value} if estado else {}
+        return list(self.col.find(filtro).sort("fecha_hora", 1))
+
+    def registrar_otorgamiento(self, id_, medico_id, fecha_hora, administrativo_id, estado: EstadoTurno):
+        self.update(
+            id_,
+            {
+                "medico_id": medico_id,
+                "fecha_hora": fecha_hora,
+                "administrativo_id": administrativo_id,
+                "estado": estado.value,
+            },
+        )
