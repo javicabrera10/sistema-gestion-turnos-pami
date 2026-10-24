@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import CampanaNotificaciones from '../components/CampanaNotificaciones';
 import '../styles/paciente.css';
 
 export default function PacienteInicio() {
@@ -10,7 +11,7 @@ export default function PacienteInicio() {
 
   useEffect(() => {
     api.get('/turnos/mios')
-      .then((ts) => setPorResponder(ts.filter((t) => t.estado === 'otorgado').length))
+      .then((ts) => setPorResponder(ts.filter((t) => t.estado === 'otorgado' || t.estado === 'reprogramado').length))
       .catch(() => {}); // si falla, simplemente no mostramos el aviso
   }, []);
 
@@ -19,6 +20,7 @@ export default function PacienteInicio() {
       <header className="pac-barra">
         <div className="pac-marca"><span className="pac-logo" aria-hidden="true" /><strong>PAMI</strong></div>
         <div className="pac-usuario">
+          <CampanaNotificaciones />
           <span>{user?.nombre || user?.email}</span>
           <button type="button" className="pac-boton pac-boton--claro" onClick={logout}>Salir</button>
         </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import CampanaNotificaciones from '../components/CampanaNotificaciones';
 import '../styles/admin.css';
 
 const FILTROS = [
@@ -8,8 +9,13 @@ const FILTROS = [
   { id: 'solicitado', label: 'Pendientes' },
   { id: 'otorgado', label: 'Otorgados' },
   { id: 'confirmado', label: 'Confirmados' },
+  { id: 'reprogramado', label: 'Reprogramados' },
   { id: 'rechazado', label: 'Rechazados' },
+  { id: 'cancelado', label: 'Cancelados' },
 ];
+
+// Estados en los que el administrativo todavía puede cambiar el turno
+const MODIFICABLES = ['otorgado', 'confirmado', 'reprogramado'];
 
 const RESUMEN = [
   { id: 'solicitado', label: 'Pendientes', ayuda: 'esperan que los otorgues' },
@@ -107,12 +113,89 @@ function PanelOtorgar({ turno, medicos, onListo, onCancelar }) {
   );
 }
 
+function PanelReprogramar({ turno, onListo, onCancelar }) {
+  const actual = new Date(turno.fecha_hora);
+  const valido = !Number.isNaN(actual.getTime());
+
+  const [fecha, setFecha] = useState(valido ? `${actual.getFullYear()}-${dos(actual.getMonth() + 1)}-${dos(actual.getDate())}` : '');
+  const [hora, setHora] = useState(valido ? `${dos(actual.getHours())}:${dos(actual.getMinutes())}` : '');
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  const enviar = async (e) => {
+    e.preventDefault();
+    setEnviando(true);
+    setError('');
+    try {
+      await api.patch(`/turnos/${turno.id}/reprogramar`, { fecha_hora: `${fecha}T${hora}:00` });
+      onListo();
+    } catch (err) {
+      setError(err.message);
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <form className="adm-otorgar" onSubmit={enviar}>
+      <p className="adm-otorgar-titulo">Elegí la nueva fecha y hora. Se le avisa al paciente.</p>
+      <div className="adm-otorgar-campos">
+        <label>
+          Día
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
+        </label>
+        <label>
+          Hora
+          <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} required />
+        </label>
+      </div>
+      {error && <p className="adm-error" role="alert">{error}</p>}
+      <div className="adm-otorgar-botones">
+        <button type="submit" className="adm-boton adm-boton--primario" disabled={enviando}>
+          {enviando ? 'Reprogramando…' : 'Reprogramar turno'}
+        </button>
+        <button type="button" className="adm-boton" onClick={onCancelar}>Volver</button>
+      </div>
+    </form>
+  );
+}
+
+function PanelCancelar({ turno, onListo, onVolver }) {
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  const confirmar = async () => {
+    setEnviando(true);
+    setError('');
+    try {
+      await api.patch(`/turnos/${turno.id}/cancelar`);
+      onListo();
+    } catch (err) {
+      setError(err.message);
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="adm-otorgar" role="alertdialog" aria-label="Confirmar cancelación">
+      <p className="adm-otorgar-titulo">¿Seguro que querés cancelar este turno? Se le avisa al paciente.</p>
+      {error && <p className="adm-error" role="alert">{error}</p>}
+      <div className="adm-otorgar-botones">
+        <button type="button" className="adm-boton adm-boton--peligro-solido" disabled={enviando} onClick={confirmar}>
+          {enviando ? 'Cancelando…' : 'Sí, cancelar turno'}
+        </button>
+        <button type="button" className="adm-boton" onClick={onVolver}>No, volver</button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminTurnos() {
   const { user, logout } = useAuth();
   const [turnos, setTurnos] = useState([]);
   const [medicos, setMedicos] = useState([]);
   const [filtro, setFiltro] = useState('solicitado');
   const [abierto, setAbierto] = useState(null);
+  const [accion, setAccion] = useState(null); // { id, tipo: 'reprogramar' | 'cancelar' }
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
@@ -166,6 +249,12 @@ export default function AdminTurnos() {
     cargar();
   };
 
+  const alCambiar = (texto) => {
+    setAccion(null);
+    setExito(texto);
+    cargar();
+  };
+
   return (
     <div className="adm">
       <header className="adm-barra">
@@ -177,6 +266,7 @@ export default function AdminTurnos() {
           </div>
         </div>
         <div className="adm-usuario">
+          <CampanaNotificaciones />
           <span>{user?.nombre || user?.email}</span>
           <button type="button" className="adm-boton" onClick={logout}>Salir</button>
         </div>
@@ -258,6 +348,23 @@ export default function AdminTurnos() {
               )}
               {abierto === t.id && (
                 <PanelOtorgar turno={t} medicos={medicos} onListo={alOtorgar} onCancelar={() => setAbierto(null)} />
+              )}
+
+              {MODIFICABLES.includes(t.estado) && accion?.id !== t.id && (
+                <div className="adm-acciones">
+                  <button type="button" className="adm-boton" onClick={() => { setAccion({ id: t.id, tipo: 'reprogramar' }); setExito(''); }}>
+                    Reprogramar
+                  </button>
+                  <button type="button" className="adm-boton adm-boton--peligro" onClick={() => { setAccion({ id: t.id, tipo: 'cancelar' }); setExito(''); }}>
+                    Cancelar turno
+                  </button>
+                </div>
+              )}
+              {accion?.id === t.id && accion.tipo === 'reprogramar' && (
+                <PanelReprogramar turno={t} onListo={() => alCambiar('Turno reprogramado. El paciente recibió el aviso.')} onCancelar={() => setAccion(null)} />
+              )}
+              {accion?.id === t.id && accion.tipo === 'cancelar' && (
+                <PanelCancelar turno={t} onListo={() => alCambiar('Turno cancelado. El paciente recibió el aviso.')} onVolver={() => setAccion(null)} />
               )}
             </li>
           ))}

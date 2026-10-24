@@ -45,7 +45,7 @@
 .pac-vacio { text-align: center; background: #fff; border: 2px dashed var(--borde); border-radius: 16px; padding: 2rem 1rem; }
 .pac-lista { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 1rem; }
 .pac-turno { background: #fff; border-radius: 18px; padding: 1.1rem 1.25rem; box-shadow: var(--sombra); border: 2px solid var(--borde); border-left: 8px solid var(--c, var(--borde)); }
-.pac-turno--otorgado { --c: var(--amarillo); }
+.pac-turno--otorgado, .pac-turno--reprogramado { --c: var(--amarillo); }
 .pac-turno--confirmado { --c: var(--verde); }
 .pac-turno--rechazado, .pac-turno--cancelado { --c: var(--rojo); }
 .pac-turno--solicitado { --c: var(--azul); }
@@ -54,7 +54,7 @@
 .pac-fecha { margin: 0.4rem 0 0; font-size: 1.25rem; font-weight: 700; }
 .pac-motivo { margin: 0.2rem 0 0.8rem; color: #51606f; }
 .pac-badge { padding: 0.25rem 0.8rem; border-radius: 999px; font-size: 0.95rem; font-weight: 700; background: #eef3fa; color: var(--azul-oscuro); }
-.pac-badge--otorgado { background: #fff1c2; color: #7a5a00; }
+.pac-badge--otorgado, .pac-badge--reprogramado { background: #fff1c2; color: #7a5a00; }
 .pac-badge--confirmado { background: #ddf3e4; color: #14502a; }
 .pac-badge--rechazado, .pac-badge--cancelado { background: #fbe0e5; color: #7d0017; }
 .pac-acciones { display: flex; gap: 0.75rem; flex-wrap: wrap; }
