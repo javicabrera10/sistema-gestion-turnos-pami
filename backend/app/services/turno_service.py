@@ -13,11 +13,12 @@ class TurnoNoEncontrado(Exception):
 
 
 def datos_evento(turno: dict) -> dict:
-    """Lo que se publica en el bus de eventos (contrato del Sprint 1 + la especialidad)."""
+    """Lo que se publica en el bus de eventos (contrato del Sprint 1 + especialidad y administrativo)."""
     return {
         "turno_id": str(turno["_id"]),
         "paciente_id": turno["paciente_id"],
         "medico_id": turno.get("medico_id"),
+        "administrativo_id": turno.get("administrativo_id"),
         "especialidad": turno.get("especialidad"),
         "fecha_hora": turno["fecha_hora"],
     }

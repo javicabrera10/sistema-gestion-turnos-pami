@@ -44,6 +44,11 @@
 .adm-boton:disabled { opacity: 0.55; cursor: not-allowed; }
 .adm-boton--primario { background: var(--azul); color: #fff; }
 .adm-boton--primario:hover:not(:disabled) { background: var(--azul-oscuro); }
+.adm-boton--peligro { border-color: var(--rojo); color: var(--rojo); }
+.adm-boton--peligro:hover:not(:disabled) { background: #fdeaed; }
+.adm-boton--peligro-solido { background: var(--rojo); border-color: var(--rojo); color: #fff; }
+.adm-boton--peligro-solido:hover:not(:disabled) { background: #8a0019; }
+.adm-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
 .adm button:focus-visible, .adm select:focus-visible, .adm input:focus-visible { outline: 3px solid var(--amarillo); outline-offset: 2px; }
 
 /* Resumen */

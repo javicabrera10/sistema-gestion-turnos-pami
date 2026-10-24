@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import CampanaNotificaciones from '../components/CampanaNotificaciones';
 import '../styles/paciente.css';
 
 const ETIQUETA = {
@@ -9,10 +10,11 @@ const ETIQUETA = {
   otorgado: 'Tenés que responder',
   confirmado: 'Confirmado',
   rechazado: 'Rechazado',
-  reprogramado: 'Reprogramado',
+  reprogramado: 'Reprogramado: tenés que responder',
   cancelado: 'Cancelado',
 };
-const ORDEN = { otorgado: 0, confirmado: 1, solicitado: 2, reprogramado: 3, rechazado: 4, cancelado: 5 };
+const ORDEN = { otorgado: 0, reprogramado: 0, confirmado: 1, solicitado: 2, rechazado: 4, cancelado: 5 };
+const PARA_RESPONDER = ['otorgado', 'reprogramado']; // el paciente puede aceptar o rechazar
 
 function fechaLarga(iso) {
   const f = new Date(iso);
@@ -78,13 +80,14 @@ export default function MisTurnos() {
   };
 
   const ordenados = [...turnos].sort((a, b) => (ORDEN[a.estado] ?? 9) - (ORDEN[b.estado] ?? 9));
-  const porResponder = turnos.filter((t) => t.estado === 'otorgado').length;
+  const porResponder = turnos.filter((t) => PARA_RESPONDER.includes(t.estado)).length;
 
   return (
     <div className="pac">
       <header className="pac-barra">
         <Link to="/paciente" className="pac-marca"><span className="pac-logo" aria-hidden="true" /><strong>PAMI</strong></Link>
         <div className="pac-usuario">
+          <CampanaNotificaciones />
           <span>{user?.nombre || user?.email}</span>
           <button type="button" className="pac-boton pac-boton--claro" onClick={logout}>Salir</button>
         </div>
@@ -118,11 +121,12 @@ export default function MisTurnos() {
               </div>
               <p className="pac-fecha">
                 {t.estado === 'solicitado' ? 'Fecha que pediste: ' : ''}
+                {t.estado === 'reprogramado' ? 'Nueva fecha: ' : ''}
                 {fechaLarga(t.fecha_hora)}
               </p>
               <p className="pac-motivo">Motivo: {t.motivo}</p>
 
-              {t.estado === 'otorgado' && rechazando !== t.id && (
+              {PARA_RESPONDER.includes(t.estado) && rechazando !== t.id && (
                 <div className="pac-acciones">
                   <button type="button" className="pac-boton pac-boton--aceptar" disabled={enviando === t.id} onClick={() => responder(t, 'aceptar')}>
                     ✔ Aceptar turno
