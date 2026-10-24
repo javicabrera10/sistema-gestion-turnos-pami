@@ -247,9 +247,9 @@ def test_no_se_puede_marcar_como_leida_la_notificacion_de_otro(app, client, h_pa
     assert client.patch("/api/notificaciones/no-es-un-id/leida", headers=h_paciente).status_code == 404
 
 
-@pytest.mark.parametrize("rol", [MEDICO, ADMIN])
-def test_solo_el_paciente_ve_notificaciones(client, auth_headers, rol):
-    assert client.get("/api/notificaciones/mias", headers=auth_headers(*rol)).status_code == 403
+def test_el_medico_no_ve_notificaciones(client, auth_headers):
+    # el paciente y el administrativo sí tienen las suyas (Sprint 2); el médico no
+    assert client.get("/api/notificaciones/mias", headers=auth_headers(*MEDICO)).status_code == 403
     assert client.get("/api/notificaciones/mias").status_code == 401
 
 

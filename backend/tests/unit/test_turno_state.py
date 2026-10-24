@@ -45,3 +45,26 @@ def test_transiciones_invalidas(estado, accion):
 def test_estado_desconocido():
     with pytest.raises(ValueError):
         estado_de("inventado")
+
+
+# ---------- Sprint 2: reprogramar y cancelar ----------
+
+@pytest.mark.parametrize("estado", [EstadoTurno.OTORGADO, EstadoTurno.CONFIRMADO, EstadoTurno.REPROGRAMADO])
+def test_se_puede_reprogramar_y_cancelar_un_turno_activo(estado):
+    assert estado_de(estado).reprogramar() == EstadoTurno.REPROGRAMADO
+    assert estado_de(estado).cancelar() == EstadoTurno.CANCELADO
+
+
+def test_el_paciente_responde_a_un_turno_reprogramado():
+    assert estado_de(EstadoTurno.REPROGRAMADO).confirmar() == EstadoTurno.CONFIRMADO
+    assert estado_de(EstadoTurno.REPROGRAMADO).rechazar() == EstadoTurno.RECHAZADO
+
+
+@pytest.mark.parametrize(
+    "estado",
+    [EstadoTurno.SOLICITADO, EstadoTurno.RECHAZADO, EstadoTurno.CANCELADO],
+)
+@pytest.mark.parametrize("accion", ["reprogramar", "cancelar"])
+def test_no_se_reprograma_ni_cancela_un_turno_sin_otorgar_o_terminado(estado, accion):
+    with pytest.raises(TransicionInvalida):
+        getattr(estado_de(estado), accion)()

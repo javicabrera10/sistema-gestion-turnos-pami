@@ -40,13 +40,21 @@ class TurnoRepository(BaseRepository):
             },
         )
 
+    def registrar_reprogramacion(self, id_, fecha_hora, administrativo_id, estado: EstadoTurno):
+        self.update(
+            id_,
+            {"fecha_hora": fecha_hora, "administrativo_id": administrativo_id, "estado": estado.value},
+        )
+
     def horario_ocupado(self, medico_id: str, fecha_hora, excluir_id=None) -> bool:
-        """True si el médico ya tiene otro turno otorgado o confirmado a esa fecha y hora."""
+        """True si el médico ya tiene otro turno otorgado, reprogramado o confirmado a esa fecha y hora."""
         ocupados = self.col.find(
             {
                 "medico_id": medico_id,
                 "fecha_hora": fecha_hora,
-                "estado": {"$in": [EstadoTurno.OTORGADO.value, EstadoTurno.CONFIRMADO.value]},
+                "estado": {
+                    "$in": [EstadoTurno.OTORGADO.value, EstadoTurno.REPROGRAMADO.value, EstadoTurno.CONFIRMADO.value]
+                },
             }
         )
         return any(str(t["_id"]) != str(excluir_id) for t in ocupados)

@@ -14,9 +14,9 @@ def _service() -> NotificacionService:
 
 
 @notificaciones_bp.get("/mias")
-@roles_required("paciente")
+@roles_required("paciente", "administrativo")
 def mis_notificaciones():
-    """Notificaciones del paciente autenticado (las más nuevas primero)
+    """Notificaciones del usuario autenticado: paciente o administrativo (las más nuevas primero)
     ---
     tags: [Notificaciones]
     responses:
@@ -32,9 +32,9 @@ def mis_notificaciones():
 
 
 @notificaciones_bp.patch("/<notificacion_id>/leida")
-@roles_required("paciente")
+@roles_required("paciente", "administrativo")
 def marcar_leida(notificacion_id):
-    """Marca una notificación como leída (solo su destinatario)
+    """Marca una notificación como leída (solo su destinatario: paciente o administrativo)
     ---
     tags: [Notificaciones]
     parameters:

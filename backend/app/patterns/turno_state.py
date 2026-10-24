@@ -7,6 +7,11 @@ flujo viven en un solo lugar y el servicio no necesita una cadena de if/else.
 Flujo actual:
     SOLICITADO --otorgar--> OTORGADO --confirmar--> CONFIRMADO
                                      --rechazar---> RECHAZADO
+
+    OTORGADO, CONFIRMADO o REPROGRAMADO --reprogramar--> REPROGRAMADO
+        (el administrativo cambia la fecha y el paciente tiene que responder de nuevo)
+    REPROGRAMADO --confirmar--> CONFIRMADO     --rechazar--> RECHAZADO
+    OTORGADO, CONFIRMADO o REPROGRAMADO --cancelar--> CANCELADO
 """
 
 from app.models.turno import EstadoTurno
@@ -34,6 +39,12 @@ class EstadoState:
     def rechazar(self) -> EstadoTurno:
         self._invalida("rechazar")
 
+    def reprogramar(self) -> EstadoTurno:
+        self._invalida("reprogramar")
+
+    def cancelar(self) -> EstadoTurno:
+        self._invalida("cancelar")
+
 
 class Solicitado(EstadoState):
     estado = EstadoTurno.SOLICITADO
@@ -51,18 +62,43 @@ class Otorgado(EstadoState):
     def rechazar(self) -> EstadoTurno:
         return EstadoTurno.RECHAZADO
 
+    def reprogramar(self) -> EstadoTurno:
+        return EstadoTurno.REPROGRAMADO
 
-# Estados sin salida por ahora (reprogramar y cancelar llegan en el Sprint 2)
+    def cancelar(self) -> EstadoTurno:
+        return EstadoTurno.CANCELADO
+
+
 class Confirmado(EstadoState):
     estado = EstadoTurno.CONFIRMADO
 
+    def reprogramar(self) -> EstadoTurno:
+        return EstadoTurno.REPROGRAMADO
 
-class Rechazado(EstadoState):
-    estado = EstadoTurno.RECHAZADO
+    def cancelar(self) -> EstadoTurno:
+        return EstadoTurno.CANCELADO
 
 
 class Reprogramado(EstadoState):
     estado = EstadoTurno.REPROGRAMADO
+
+    # el paciente responde a la nueva fecha igual que con un turno recién otorgado
+    def confirmar(self) -> EstadoTurno:
+        return EstadoTurno.CONFIRMADO
+
+    def rechazar(self) -> EstadoTurno:
+        return EstadoTurno.RECHAZADO
+
+    def reprogramar(self) -> EstadoTurno:
+        return EstadoTurno.REPROGRAMADO
+
+    def cancelar(self) -> EstadoTurno:
+        return EstadoTurno.CANCELADO
+
+
+# Estados finales: no tienen salida
+class Rechazado(EstadoState):
+    estado = EstadoTurno.RECHAZADO
 
 
 class Cancelado(EstadoState):
