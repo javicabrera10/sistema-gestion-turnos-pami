@@ -34,6 +34,7 @@ def create_app(config_class=Config, db=None):
     from .routes.notificaciones import notificaciones_bp
     from .routes.pacientes import pacientes_bp
     from .routes.recetas import recetas_bp
+    from .routes.recordatorios import recordatorios_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -44,6 +45,7 @@ def create_app(config_class=Config, db=None):
     app.register_blueprint(medicos_bp, url_prefix="/api/medicos")
     app.register_blueprint(pacientes_bp, url_prefix="/api/pacientes")
     app.register_blueprint(notificaciones_bp, url_prefix="/api/notificaciones")
+    app.register_blueprint(recordatorios_bp, url_prefix="/api/recordatorios")
     registrar_observers(app)
 
     @app.errorhandler(ValidationError)

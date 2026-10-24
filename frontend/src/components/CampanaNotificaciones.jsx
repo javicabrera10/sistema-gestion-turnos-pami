@@ -9,6 +9,7 @@ const ICONOS = {
   turno_cancelado: '❌',
   turno_confirmado: '✅',
   turno_rechazado: '🚫',
+  recordatorio: '⏰',
 };
 const CADA_MS = 60000; // se vuelve a consultar cada minuto
 
