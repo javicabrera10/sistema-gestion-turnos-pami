@@ -39,7 +39,8 @@ export function interpretar(texto, contexto = 'accion') {
 }
 
 function interpretarUna(t, contexto) {
-  if (tiene(t, [/\b(salir|parar|para|basta|termin\w*|detener|detene|chau|cerrar)\b/])) {
+  // "para" suelto cuenta como orden, pero dentro de una frase ("para el lunes") no
+  if (tiene(t, [/\b(salir|parar|basta|terminar|termina|detener|detene|chau|cerrar)\b/, /^(para|pare)$/])) {
     return INTENCION.SALIR;
   }
 
@@ -67,4 +68,14 @@ function interpretarUna(t, contexto) {
     return INTENCION.SIGUIENTE;
   }
   return INTENCION.NADA;
+}
+
+// Para preguntas con respuesta libre (fecha, hora, motivo): solo es una orden de salir
+// si la frase es corta ("parar", "chau", "salir"), nunca si es parte de una respuesta larga.
+export function esOrdenDeSalir(texto) {
+  const t = normalizar(texto);
+  if (!t || t.split(' ').length > 3) return false;
+  // "para" / "pare" solo valen si son la única palabra: "para el lunes" es una respuesta, no una orden
+  if (/^(para|pare)$/.test(t)) return true;
+  return /\b(salir|parar|basta|terminar|detener|detene|chau|cerrar|cancelar|cancela)\b/.test(t);
 }

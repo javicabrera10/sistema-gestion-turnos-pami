@@ -6,9 +6,9 @@ import { ESTADO, useSolicitudVoz } from '../hooks/useSolicitudVoz';
 import { ESPECIALIDADES } from '../utils/parseTurno';
 import '../styles/solicitud.css';
 
-// El contrato del Sprint 1 agrega `origen: "manual" | "voz"` a la solicitud (tarea J4).
-// El backend actual usa extra="forbid" y todavía lo rechaza: poner en true cuando Javier lo agregue.
-const ENVIAR_ORIGEN = false;
+// El backend guarda `origen: "manual" | "voz"` en cada solicitud (tarea J4 del Sprint 1).
+// Si se conecta este front a una versión vieja del backend que lo rechaza, poner en false.
+const ENVIAR_ORIGEN = true;
 
 const ETIQUETA = {
   [ESTADO.QUIETO]: 'Podés pedir el turno hablando',

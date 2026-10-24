@@ -46,7 +46,7 @@ export function limpiar(texto) {
 }
 
 const UNIDADES = {
-  cero: 0, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9,
+  cero: 0, primero: 1, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9,
   diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17,
   dieciocho: 18, diecinueve: 19, veinte: 20, veintiuno: 21, veintiun: 21, veintidos: 22, veintitres: 23,
   veinticuatro: 24, veinticinco: 25, veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
@@ -82,7 +82,7 @@ const sumarDias = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() 
 
 // Devuelve 'YYYY-MM-DD' o null. Nunca devuelve una fecha anterior a hoy.
 export function interpretarFecha(texto, ahora = new Date()) {
-  let t = palabrasADigitos(limpiar(texto));
+  let t = palabrasADigitos(limpiar(texto)).replace(/\bsetiembre\b/, 'septiembre');
   t = t.split(/\ba las?\b|\ba la\b|\bhs\b|\bhoras\b/)[0]; // lo que viene después es la hora
   if (!t) return null;
   const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
@@ -105,7 +105,20 @@ export function interpretarFecha(texto, ahora = new Date()) {
     return f ? aIso(f) : null;
   }
 
-  // "5/11" o "5-11"
+  // "en 3 días", "dentro de 2 días"
+  const enDias = t.match(/\b(?:en|dentro de) (\d{1,2}) dias?\b/);
+  if (enDias) return aIso(sumarDias(hoy, Number(enDias[1])));
+
+  // "5 del 11", "5 de 11"
+  const delNumero = t.match(/\b(\d{1,2}) (?:de|del) (\d{1,2})\b/);
+  if (delNumero) {
+    const m = Number(delNumero[2]) - 1;
+    let f = valida(hoy.getFullYear(), m, Number(delNumero[1]));
+    if (f && f < hoy) f = valida(hoy.getFullYear() + 1, m, Number(delNumero[1]));
+    return f ? aIso(f) : null;
+  }
+
+  // "5/11" o "5-11
   const barra = t.match(/\b(\d{1,2})[/-](\d{1,2})\b/);
   if (barra) {
     const m = Number(barra[2]) - 1;
@@ -159,7 +172,7 @@ export function interpretarHora(texto) {
   } else if ((r = t.match(/\b(\d{1,2}) y cuarto\b/))) {
     h = Number(r[1]);
     m = 15;
-  } else if ((r = t.match(/\b(\d{1,2})[:.](\d{2})\b/)) || (r = t.match(/\b(\d{1,2}) y (\d{1,2})\b/))) {
+  } else if ((r = t.match(/\b(\d{1,2})[:.](\d{2})\b/)) || (r = t.match(/\b(\d{1,2}) y (\d{1,2})\b/)) || (r = t.match(/\b(\d{1,2}) (\d{2})\b/))) {
     h = Number(r[1]);
     m = Number(r[2]);
   } else if ((r = t.match(/\b(\d{1,2})\b/))) {
@@ -168,8 +181,8 @@ export function interpretarHora(texto) {
     return null;
   }
 
-  const esTarde = /\b(tarde|noche)\b/.test(t);
-  const esManana = /\b(manana|madrugada)\b/.test(t);
+  const esTarde = /\b(tarde|noche|p ?m)\b/.test(t); // "p. m." se limpia a "p m"
+  const esManana = /\b(manana|madrugada|a ?m)\b/.test(t); // "a. m." se limpia a "a m
   if (esTarde && h < 12) h += 12;
   else if (!esTarde && !esManana && h >= 1 && h <= 7) h += 12;
 

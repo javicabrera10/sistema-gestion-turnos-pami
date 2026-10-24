@@ -1,4 +1,4 @@
-from pymongo import ASCENDING
+from pymongo import ASCENDING, DESCENDING
 
 from app.security.passwords import hash_password
 
@@ -16,7 +16,15 @@ def crear_indices(db) -> None:
     db.usuarios.create_index([("email", ASCENDING)], unique=True, name="uq_usuarios_email")
     db.turnos.create_index(
         [("paciente_id", ASCENDING), ("fecha_hora", ASCENDING)], name="ix_turnos_paciente_fecha"
-        )
+    )
+    db.turnos.create_index(
+        [("medico_id", ASCENDING), ("fecha_hora", ASCENDING)], name="ix_turnos_medico_fecha"
+    )
+    db.recetas.create_index([("medico_id", ASCENDING)], name="ix_recetas_medico")
+    db.recetas.create_index([("paciente_id", ASCENDING), ("estado", ASCENDING)], name="ix_recetas_paciente_estado")
+    db.notificaciones.create_index(
+        [("destinatario_id", ASCENDING), ("creada_en", DESCENDING)], name="ix_notificaciones_destinatario"
+    )
 
 
 def seed_usuarios(db) -> int:

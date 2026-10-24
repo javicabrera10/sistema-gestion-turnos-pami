@@ -33,3 +33,15 @@ class UsuarioRepository(BaseRepository):
 
     def resetear_intentos(self, id_):
         self.update(id_, {"intentos_fallidos": 0, "bloqueado_hasta": None})
+
+    def listar_por_rol(self, rol: str, especialidad: str | None = None):
+        """Usuarios de un rol (sin credenciales). La especialidad se compara sin mayúsculas ni espacios."""
+        docs = list(self.col.find({"rol": rol}, {"password_hash": 0}))
+        if especialidad:
+            buscada = especialidad.strip().lower()
+            docs = [d for d in docs if str(d.get("especialidad", "")).strip().lower() == buscada]
+        return docs
+
+    def buscar_paciente_por_dni(self, dni: str):
+        """Solo id, nombre y DNI: lo mínimo para identificar al paciente."""
+        return self.col.find_one({"rol": "paciente", "dni": dni}, {"nombre": 1, "dni": 1})

@@ -39,3 +39,14 @@ class TurnoRepository(BaseRepository):
                 "estado": estado.value,
             },
         )
+
+    def horario_ocupado(self, medico_id: str, fecha_hora, excluir_id=None) -> bool:
+        """True si el médico ya tiene otro turno otorgado o confirmado a esa fecha y hora."""
+        ocupados = self.col.find(
+            {
+                "medico_id": medico_id,
+                "fecha_hora": fecha_hora,
+                "estado": {"$in": [EstadoTurno.OTORGADO.value, EstadoTurno.CONFIRMADO.value]},
+            }
+        )
+        return any(str(t["_id"]) != str(excluir_id) for t in ocupados)

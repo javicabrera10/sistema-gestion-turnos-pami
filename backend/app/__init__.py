@@ -5,6 +5,7 @@ from pymongo import MongoClient
 
 from .config import Config
 from .extensions import jwt, limiter, swagger
+from .patterns.observer import EventBus
 
 
 def create_app(config_class=Config, db=None):
@@ -20,20 +21,31 @@ def create_app(config_class=Config, db=None):
         client = MongoClient(app.config["MONGO_URI"], serverSelectionTimeoutMS=3000)
         db = client[app.config["MONGO_DB"]]
     app.db = db
+    # Observer: se crea una sola vez; los services publican eventos y los observers reaccionan
+    app.event_bus = EventBus()
 
     from .routes.auth import auth_bp
     from .routes.health import health_bp
     from .routes.usuarios import usuarios_bp
     from .routes.turnos import turnos_bp
     from .routes.turnos_admin import turnos_admin_bp
-    from .routes.recetas import recetas_bp  
+    from .patterns.observers import registrar_observers
+    from .routes.medicos import medicos_bp
+    from .routes.notificaciones import notificaciones_bp
+    from .routes.pacientes import pacientes_bp
+    from .routes.recetas import recetas_bp
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
     app.register_blueprint(turnos_bp, url_prefix="/api/turnos")
     app.register_blueprint(turnos_admin_bp, url_prefix="/api/turnos")
-    app.register_blueprint(recetas_bp, url_prefix="/api/recetas") 
+    app.register_blueprint(recetas_bp, url_prefix="/api/recetas")
+    app.register_blueprint(medicos_bp, url_prefix="/api/medicos")
+    app.register_blueprint(pacientes_bp, url_prefix="/api/pacientes")
+    app.register_blueprint(notificaciones_bp, url_prefix="/api/notificaciones")
+    registrar_observers(app)
+
     @app.errorhandler(ValidationError)
     def datos_invalidos(e):
         detalles = e.errors(include_url=False, include_context=False, include_input=False)

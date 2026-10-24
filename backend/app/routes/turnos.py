@@ -3,7 +3,7 @@ from flask_jwt_extended import get_jwt_identity
 
 from app.patterns.turno_state import TransicionInvalida
 from app.repositories.turno_repository import TurnoRepository
-from app.schemas.turno import SolicitudTurnoSchema
+from app.schemas.turno import RespuestaTurnoSchema, SolicitudTurnoSchema
 from app.security.roles import roles_required
 from app.services.turno_service import TurnoNoEncontrado, TurnoService
 from app.utils.serializers import serializar_turno
@@ -12,7 +12,7 @@ turnos_bp = Blueprint("turnos", __name__)
 
 
 def _service() -> TurnoService:
-    return TurnoService(TurnoRepository(current_app.db))
+    return TurnoService(TurnoRepository(current_app.db), current_app.event_bus)
 
 
 def _responder(metodo, turno_id: str):
@@ -42,6 +42,7 @@ def solicitar_turno():
             especialidad: {type: string, example: Cardiología}
             fecha_hora: {type: string, example: "2026-11-05T10:30:00"}
             motivo: {type: string, example: Control anual}
+            origen: {type: string, enum: [manual, voz], example: voz, description: "Cómo lo pidió el paciente (por defecto manual)"}
     responses:
       201:
         description: Turno creado en estado solicitado
@@ -73,6 +74,44 @@ def mis_turnos():
     """
     turnos = _service().listar_del_paciente(get_jwt_identity())
     return jsonify([serializar_turno(t) for t in turnos])
+
+
+@turnos_bp.patch("/<turno_id>/respuesta")
+@roles_required("paciente")
+def responder_turno(turno_id):
+    """El paciente acepta o rechaza un turno otorgado (botón Aceptar / Rechazar)
+    ---
+    tags: [Turnos]
+    parameters:
+      - in: path
+        name: turno_id
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            accion: {type: string, enum: [aceptar, rechazar]}
+    responses:
+      200:
+        description: Turno confirmado o rechazado
+      400:
+        description: Acción inválida
+      401:
+        description: Falta el token
+      403:
+        description: El rol no tiene permiso
+      404:
+        description: El turno no existe o es de otro paciente
+      409:
+        description: El turno no está en estado otorgado
+    """
+    datos = RespuestaTurnoSchema.model_validate(request.get_json(silent=True) or {})
+    servicio = _service()
+    metodo = servicio.confirmar if datos.accion == "aceptar" else servicio.rechazar
+    return _responder(metodo, turno_id)
 
 
 @turnos_bp.patch("/<turno_id>/confirmar")

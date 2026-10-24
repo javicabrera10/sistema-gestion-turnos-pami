@@ -117,13 +117,14 @@ export default function AdminTurnos() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
+  // Recarga manual (botón "Actualizar" y después de otorgar): muestra el cargando y limpia el error.
   const cargar = useCallback(async () => {
     setCargando(true);
     setError('');
     try {
-      const [ts, us] = await Promise.all([api.get('/turnos'), api.get('/usuarios').catch(() => [])]);
+      const [ts, us] = await Promise.all([api.get('/turnos'), api.get('/medicos').catch(() => [])]);
       setTurnos(ts);
-      setMedicos(us.filter((u) => u.rol === 'medico'));
+      setMedicos(us); // GET /api/medicos ya devuelve solo médicos: id, nombre y especialidad
     } catch (e) {
       setError(e.message);
     } finally {
@@ -131,9 +132,24 @@ export default function AdminTurnos() {
     }
   }, []);
 
+  // Carga inicial: el estado arranca en cargando=true y error='', así que no hace falta setearlos acá.
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    let activo = true;
+    const cargarInicial = async () => {
+      try {
+        const [ts, us] = await Promise.all([api.get('/turnos'), api.get('/medicos').catch(() => [])]);
+        if (!activo) return;
+        setTurnos(ts);
+        setMedicos(us);
+      } catch (e) {
+        if (activo) setError(e.message);
+      } finally {
+        if (activo) setCargando(false);
+      }
+    };
+    cargarInicial();
+    return () => { activo = false; };
+  }, []);
 
   const cuenta = useMemo(() => {
     const c = {};
