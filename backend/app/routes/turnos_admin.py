@@ -6,7 +6,7 @@ from app.repositories.turno_repository import TurnoRepository
 from app.repositories.usuario_repository import UsuarioRepository
 from app.schemas.turno import FiltroTurnosSchema, OtorgarTurnoSchema
 from app.security.roles import roles_required
-from app.services.turno_admin_service import MedicoInvalido, TurnoAdminService
+from app.services.turno_admin_service import HorarioOcupado, MedicoInvalido, TurnoAdminService
 from app.services.turno_service import TurnoNoEncontrado
 from app.utils.serializers import serializar_turno_con_paciente
 
@@ -15,7 +15,9 @@ turnos_admin_bp = Blueprint("turnos_admin", __name__)
 
 
 def _service() -> TurnoAdminService:
-    return TurnoAdminService(TurnoRepository(current_app.db), UsuarioRepository(current_app.db))
+    return TurnoAdminService(
+        TurnoRepository(current_app.db), UsuarioRepository(current_app.db), current_app.event_bus
+    )
 
 
 @turnos_admin_bp.get("")
@@ -104,7 +106,7 @@ def otorgar_turno(turno_id):
       404:
         description: El turno no existe
       409:
-        description: El turno no está en estado solicitado
+        description: El turno no está en estado solicitado, o el médico ya tiene un turno a esa hora
     """
     datos = OtorgarTurnoSchema.model_validate(request.get_json(silent=True) or {})
     try:
@@ -115,4 +117,6 @@ def otorgar_turno(turno_id):
         return jsonify(error="El médico indicado no existe"), 400
     except TransicionInvalida as e:
         return jsonify(error=str(e)), 409
+    except HorarioOcupado:
+        return jsonify(error="El médico ya tiene un turno a esa fecha y hora"), 409
     return jsonify(serializar_turno_con_paciente(turno))

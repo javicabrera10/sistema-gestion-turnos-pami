@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -23,8 +24,18 @@ class SolicitudTurnoSchema(BaseModel):
     especialidad: str = Field(min_length=3, max_length=60)
     fecha_hora: datetime
     motivo: str = Field(min_length=3, max_length=300)
+    # cómo lo pidió el paciente: el frontend manda "voz" cuando usó el reconocimiento de voz
+    origen: Literal["manual", "voz"] = "manual"
 
     _fecha = field_validator("fecha_hora")(_futura_y_en_utc)
+
+
+class RespuestaTurnoSchema(BaseModel):
+    """Respuesta del paciente a un turno otorgado: botón Aceptar o Rechazar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    accion: Literal["aceptar", "rechazar"]
 
 
 class OtorgarTurnoSchema(BaseModel):
@@ -44,3 +55,11 @@ class FiltroTurnosSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     estado: EstadoTurno | None = None
+
+
+class FiltroMedicosSchema(BaseModel):
+    """Parámetros de la URL para listar médicos: /api/medicos?especialidad=Cardiología"""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    especialidad: str | None = Field(default=None, max_length=60)

@@ -1,6 +1,11 @@
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
+
+
+def _ahora() -> datetime:
+    # Mongo guarda datetimes en UTC sin zona horaria (igual que en el resto de la app)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class EstadoTurno(str, Enum):
@@ -21,4 +26,6 @@ class Turno:
     estado: EstadoTurno = EstadoTurno.SOLICITADO
     medico_id: str | None = None  # se asigna al otorgar el turno (US2)
     administrativo_id: str | None = None
+    origen: str = "manual"  # "manual" o "voz": cómo lo pidió el paciente
+    creado_en: datetime = field(default_factory=_ahora)
     id: str | None = None

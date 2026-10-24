@@ -1,7 +1,8 @@
 import logging
 
+from app.patterns.observer import TURNO_OTORGADO
 from app.patterns.turno_state import estado_de
-from app.services.turno_service import TurnoNoEncontrado
+from app.services.turno_service import TurnoNoEncontrado, datos_evento
 
 log = logging.getLogger("pami.turnos")
 
@@ -10,12 +11,17 @@ class MedicoInvalido(Exception):
     pass
 
 
+class HorarioOcupado(Exception):
+    pass
+
+
 class TurnoAdminService:
     """Operaciones del administrativo sobre los turnos (ver solicitudes y otorgar)."""
 
-    def __init__(self, turnos_repo, usuarios_repo):
+    def __init__(self, turnos_repo, usuarios_repo, event_bus=None):
         self.turnos = turnos_repo
         self.usuarios = usuarios_repo
+        self.bus = event_bus
 
     def listar(self, estado=None) -> list[dict]:
         return self._con_pacientes(self.turnos.listar(estado))
@@ -38,6 +44,9 @@ class TurnoAdminService:
         if medico is None or medico.get("rol") != "medico":
             raise MedicoInvalido()
 
+        if self.turnos.horario_ocupado(datos.medico_id, datos.fecha_hora, excluir_id=turno["_id"]):
+            raise HorarioOcupado()
+
         self.turnos.registrar_otorgamiento(
             turno["_id"], datos.medico_id, datos.fecha_hora, administrativo_id, nuevo_estado
         )
@@ -45,6 +54,10 @@ class TurnoAdminService:
             "turno id=%s otorgado por administrativo=%s medico=%s",
             turno["_id"], administrativo_id, datos.medico_id,
         )
+        otorgado = self.turnos.get_by_id(turno["_id"])
+        if self.bus is not None:
+            # el observer de notificaciones le avisa al paciente con la fecha y hora
+            self.bus.publicar(TURNO_OTORGADO, datos_evento(otorgado))
         return self.obtener(turno_id)
 
     def _con_pacientes(self, turnos: list[dict]) -> list[dict]:
