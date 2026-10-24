@@ -3,10 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import '../styles/receta.css';
 
-// Hoy el backend define el alta como `post("/")`: POST /api/recetas responde 308 y el navegador
-// lo rechaza en CORS. Con la barra final funciona; y si en el backend se pone strict_slashes=False
-// (recomendado), esta ruta sigue andando.
-const RUTA_RECETAS = '/recetas/';
+// El backend acepta /api/recetas con y sin barra final (strict_slashes=False), así que no hay 308.
+const RUTA_RECETAS = '/recetas';
 
 const MED_VACIO = { nombre: '', dosis: '', horario_toma: '' };
 
@@ -73,8 +71,7 @@ export default function MedicoRecetas() {
 
     setEnviando(true);
     try {
-      // `tipo` e `indicaciones` son parte del contrato del Sprint 1 (tarea M1/M3). El backend
-      // actual solo guarda paciente_id y medicamentos: lo demás se ignora hasta que se agregue.
+      // tipo: 'receta' lleva medicamentos; 'orden' (estudio o práctica) lleva todo en las indicaciones.
       const creada = await api.post(RUTA_RECETAS, {
         paciente_id: pacienteId,
         tipo,

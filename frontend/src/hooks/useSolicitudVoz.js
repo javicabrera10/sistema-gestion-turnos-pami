@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { callar, cancelarEscucha, escuchar, hablar } from '../services/voz';
-import { INTENCION, interpretar } from '../utils/comandosVoz';
+import { INTENCION, esOrdenDeSalir, interpretar } from '../utils/comandosVoz';
 import {
   aFechaHora,
   buscarEspecialidad,
@@ -61,9 +61,11 @@ export function useSolicitudVoz({ datos, setCampo, enviar }) {
       for (let i = 0; i < INTENTOS; i += 1) {
         await decir(i === 0 ? pregunta : `No te entendí. ${pregunta}`, vigente);
         if (!vigente()) return { salir: true };
+        await new Promise((r) => setTimeout(r, 400)); // que no se escuche a sí mismo
+        if (!vigente()) return { salir: true };
         setEstado(ESTADO.ESCUCHANDO);
         setOido('');
-        let texto = '';
+        let texto;
         try {
           texto = await escuchar({ tiempoMs: 9000 });
         } catch (e) {
@@ -78,7 +80,7 @@ export function useSolicitudVoz({ datos, setCampo, enviar }) {
         if (!vigente()) return { salir: true };
         const alternativas = texto.split('|').map((a) => a.trim()).filter(Boolean);
         setOido(alternativas[0] || '');
-        if (alternativas.some((a) => interpretar(a, 'accion') === INTENCION.SALIR)) return { salir: true };
+        if (alternativas.some(esOrdenDeSalir)) return { salir: true };
         for (const alt of alternativas) {
           const valor = leer(alt);
           if (valor) return { valor, texto: alt };
