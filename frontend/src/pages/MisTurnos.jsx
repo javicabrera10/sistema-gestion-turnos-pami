@@ -31,6 +31,7 @@ export default function MisTurnos() {
   const [rechazando, setRechazando] = useState(null); // id del turno que pide confirmación
   const [enviando, setEnviando] = useState(null);
 
+  // Recarga manual (después de responder un turno): muestra el cargando y limpia el error.
   const cargar = useCallback(async () => {
     setCargando(true);
     setError('');
@@ -43,9 +44,22 @@ export default function MisTurnos() {
     }
   }, []);
 
+  // Carga inicial: el estado arranca en cargando=true y error='', así que no hace falta setearlos acá.
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    let activo = true;
+    const cargarInicial = async () => {
+      try {
+        const datos = await api.get('/turnos/mios');
+        if (activo) setTurnos(datos);
+      } catch (e) {
+        if (activo) setError(e.message);
+      } finally {
+        if (activo) setCargando(false);
+      }
+    };
+    cargarInicial();
+    return () => { activo = false; };
+  }, []);
 
   const responder = async (turno, accion) => {
     setEnviando(turno.id);
