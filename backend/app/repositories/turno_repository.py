@@ -1,3 +1,4 @@
+from bson import ObjectId
 from bson.errors import InvalidId
 
 from app.models.turno import EstadoTurno
@@ -43,8 +44,23 @@ class TurnoRepository(BaseRepository):
     def registrar_reprogramacion(self, id_, fecha_hora, administrativo_id, estado: EstadoTurno):
         self.update(
             id_,
-            {"fecha_hora": fecha_hora, "administrativo_id": administrativo_id, "estado": estado.value},
+            {
+                "fecha_hora": fecha_hora,
+                "administrativo_id": administrativo_id,
+                "estado": estado.value,
+                # con otra fecha, los recordatorios vuelven a empezar
+                "recordatorios_enviados": [],
+            },
         )
+
+    def listar_confirmados_entre(self, desde, hasta):
+        """Turnos confirmados que son después de `desde` y hasta `hasta` (inclusive), del más próximo al más lejano."""
+        filtro = {"estado": EstadoTurno.CONFIRMADO.value, "fecha_hora": {"$gt": desde, "$lte": hasta}}
+        return list(self.col.find(filtro).sort("fecha_hora", 1))
+
+    def marcar_recordatorios_enviados(self, id_, nombres) -> None:
+        """Anota qué reglas de recordatorio ya se cumplieron para este turno (sin repetir nombres)."""
+        self.col.update_one({"_id": ObjectId(id_)}, {"$addToSet": {"recordatorios_enviados": {"$each": list(nombres)}}})
 
     def horario_ocupado(self, medico_id: str, fecha_hora, excluir_id=None) -> bool:
         """True si el médico ya tiene otro turno otorgado, reprogramado o confirmado a esa fecha y hora."""

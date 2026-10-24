@@ -75,3 +75,11 @@ def test_no_se_marca_como_leida_la_notificacion_de_otro(service):
     with pytest.raises(NotificacionNoEncontrada):
         service.marcar_leida(id_, "otra-persona")
     assert service.marcar_leida(id_, "p1")["leida"] is True
+
+
+def test_recordatorio_avisa_al_paciente_el_dia_y_la_hora(service):
+    service.crear_recordatorio(_datos())
+
+    notif = service.listar_mias("p1")[0]
+    assert notif["tipo"] == "recordatorio"
+    assert notif["mensaje"] == "Recordatorio: tenés un turno de Cardiología el 05/11/2099 a las 10:30 hs."

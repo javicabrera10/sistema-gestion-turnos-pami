@@ -13,6 +13,7 @@ TIPO_TURNO_REPROGRAMADO = "turno_reprogramado"
 TIPO_TURNO_CANCELADO = "turno_cancelado"
 TIPO_TURNO_CONFIRMADO = "turno_confirmado"
 TIPO_TURNO_RECHAZADO = "turno_rechazado"
+TIPO_RECORDATORIO = "recordatorio"
 
 
 @dataclass

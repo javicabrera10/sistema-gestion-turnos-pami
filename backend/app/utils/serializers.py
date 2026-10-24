@@ -12,8 +12,12 @@ def serializar_usuario(doc: dict) -> dict:
     return salida
 
 
+# campos internos que no se muestran en la API
+OCULTOS_TURNO = {"_id", "recordatorios_enviados"}
+
+
 def serializar_turno(doc: dict) -> dict:
-    salida = {k: v for k, v in doc.items() if k != "_id"}
+    salida = {k: v for k, v in doc.items() if k not in OCULTOS_TURNO}
     salida["id"] = str(doc["_id"])
     salida["fecha_hora"] = _iso(doc["fecha_hora"])
     if "creado_en" in salida:

@@ -18,8 +18,10 @@ class NotificacionRepository(BaseRepository):
         return self.insert(doc)
 
     def listar_por_destinatario(self, destinatario_id: str):
-        # primero las más nuevas
-        return list(self.col.find({"destinatario_id": destinatario_id}).sort("creada_en", -1))
+        # primero las más nuevas. El reloj puede dar la misma fecha a dos avisos creados casi juntos
+        # (en Windows tiene ~15 ms de resolución y Mongo guarda milisegundos), así que se desempata
+        # por _id, que crece en el orden de inserción.
+        return list(self.col.find({"destinatario_id": destinatario_id}).sort([("creada_en", -1), ("_id", -1)]))
 
     def marcar_leida(self, id_) -> None:
         self.update(id_, {"leida": True})

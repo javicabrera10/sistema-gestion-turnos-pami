@@ -2,6 +2,7 @@ import logging
 from dataclasses import asdict
 
 from app.models.notificacion import (
+    TIPO_RECORDATORIO,
     TIPO_TURNO_CANCELADO,
     TIPO_TURNO_CONFIRMADO,
     TIPO_TURNO_OTORGADO,
@@ -65,6 +66,11 @@ class NotificacionService:
         accion, tipo = ("confirmó", TIPO_TURNO_CONFIRMADO) if aceptado else ("rechazó", TIPO_TURNO_RECHAZADO)
         mensaje = f"{quien} {accion} el turno{_de_especialidad(datos)} del {_cuando(datos['fecha_hora'])}."
         return self._crear(administrativo_id, datos["turno_id"], tipo, mensaje)
+
+    def crear_recordatorio(self, datos: dict) -> str:
+        """Le recuerda al paciente que se acerca su turno (lo genera el servicio de recordatorios)."""
+        mensaje = f"Recordatorio: tenés un turno{_de_especialidad(datos)} el {_cuando(datos['fecha_hora'])}."
+        return self._crear(datos["paciente_id"], datos["turno_id"], TIPO_RECORDATORIO, mensaje)
 
     def listar_mias(self, destinatario_id: str) -> list[dict]:
         return self.repo.listar_por_destinatario(destinatario_id)
