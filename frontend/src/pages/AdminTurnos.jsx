@@ -199,6 +199,7 @@ export default function AdminTurnos() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
+  const [generando, setGenerando] = useState(false);
 
   // Recarga manual (botón "Actualizar" y después de otorgar): muestra el cargando y limpia el error.
   const cargar = useCallback(async () => {
@@ -247,6 +248,25 @@ export default function AdminTurnos() {
     setAbierto(null);
     setExito('Turno otorgado. El paciente ya puede verlo.');
     cargar();
+  };
+
+  // Crea los recordatorios de los turnos confirmados que se acercan (POST /api/recordatorios/ejecutar)
+  const generarRecordatorios = async () => {
+    setGenerando(true);
+    setError('');
+    setExito('');
+    try {
+      const { enviados } = await api.post('/recordatorios/ejecutar');
+      setExito(
+        enviados === 0
+          ? 'No hay recordatorios nuevos para enviar.'
+          : `Se ${enviados === 1 ? 'creó 1 recordatorio' : `crearon ${enviados} recordatorios`}. Los pacientes ya los ven en su campana.`,
+      );
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setGenerando(false);
+    }
   };
 
   const alCambiar = (texto) => {
@@ -304,6 +324,9 @@ export default function AdminTurnos() {
               {f.label}
             </button>
           ))}
+          <button type="button" className="adm-boton adm-actualizar" onClick={generarRecordatorios} disabled={generando}>
+            {generando ? 'Generando…' : '⏰ Generar recordatorios'}
+          </button>
           <button type="button" className="adm-boton adm-actualizar" onClick={cargar} disabled={cargando}>
             ↻ Actualizar
           </button>

@@ -118,7 +118,7 @@ aplicables = [r for r in self.reglas if r.debe_recordar(turno["fecha_hora"], aho
 - Las reglas se pueden elegir sin tocar código con la variable de entorno `RECORDATORIOS_REGLAS` (por ejemplo `24h,2h`).
 - Cada regla se cumple una sola vez por turno: el servicio guarda en el turno qué reglas ya se aplicaron, así que se puede ejecutar todas las veces que se quiera sin duplicar avisos.
 
-**Cómo se ejecuta.** Con el script programable `uv run python -m scripts.enviar_recordatorios` o con `POST /api/recordatorios/ejecutar` (solo administrativo).
+**Cómo se ejecuta.** Con el script programable `uv run python -m scripts.enviar_recordatorios`, con el botón *Generar recordatorios* del panel del administrativo o con `POST /api/recordatorios/ejecutar` (solo administrativo).
 
 **Variables opcionales.** `RECORDATORIOS_REGLAS` (reglas a usar) y `RECORDATORIOS_UTC_OFFSET` (diferencia horaria de la hora local con UTC; por defecto `-3`, porque los turnos se guardan en hora local sin zona horaria).
 
