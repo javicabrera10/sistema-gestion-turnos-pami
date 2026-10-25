@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --font-size-base: 16px;
   --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
   
@@ -82,4 +82,15 @@ a:hover {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Accesibilidad: tamaño de letra elegido por el usuario (clase en <html>, ver AccesibilidadContext) */
+html.acc-letra-grande {
+  font-size: 125%;
+  --font-size-base: 20px;
+}
+
+html.acc-letra-muy-grande {
+  font-size: 150%;
+  --font-size-base: 24px;
 }

@@ -45,6 +45,10 @@ export default function PacienteInicio() {
             <span className="pac-icono" aria-hidden="true">🩺</span>
             <span><strong>Mis turnos</strong><small>Mirá tus turnos y respondé si los aceptás</small></span>
           </Link>
+          <Link to="/accesibilidad" className="pac-opcion">
+            <span className="pac-icono" aria-hidden="true">&#9881;&#65039;</span>
+            <span><strong>Accesibilidad</strong><small>Elegí el tamaño de letra, el contraste y la voz</small></span>
+          </Link>
         </nav>
       </main>
     </div>
