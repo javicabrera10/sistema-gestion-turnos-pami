@@ -1,0 +1,559 @@
+﻿=== MisTurnos.jsx ===
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
+import '../styles/paciente.css';
+
+const ETIQUETA = {
+  solicitado: 'Esperando que te den fecha',
+  otorgado: 'TenÃ©s que responder',
+  confirmado: 'Confirmado',
+  rechazado: 'Rechazado',
+  reprogramado: 'Reprogramado',
+  cancelado: 'Cancelado',
+};
+const ORDEN = { otorgado: 0, confirmado: 1, solicitado: 2, reprogramado: 3, rechazado: 4, cancelado: 5 };
+
+function fechaLarga(iso) {
+  const f = new Date(iso);
+  if (Number.isNaN(f.getTime())) return 'Fecha a confirmar';
+  const dia = f.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const hora = f.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} Â· ${hora} hs`;
+}
+
+export default function MisTurnos() {
+  const { user, logout } = useAuth();
+  const [turnos, setTurnos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [rechazando, setRechazando] = useState(null); // id del turno que pide confirmaciÃ³n
+  const [enviando, setEnviando] = useState(null);
+
+  // Recarga manual (despuÃ©s de responder un turno): muestra el cargando y limpia el error.
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    setError('');
+    try {
+      setTurnos(await api.get('/turnos/mios'));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  // Carga inicial: el estado arranca en cargando=true y error='', asÃ­ que no hace falta setearlos acÃ¡.
+  useEffect(() => {
+    let activo = true;
+    const cargarInicial = async () => {
+      try {
+        const datos = await api.get('/turnos/mios');
+        if (activo) setTurnos(datos);
+      } catch (e) {
+        if (activo) setError(e.message);
+      } finally {
+        if (activo) setCargando(false);
+      }
+    };
+    cargarInicial();
+    return () => { activo = false; };
+  }, []);
+
+  const responder = async (turno, accion) => {
+    setEnviando(turno.id);
+    setError('');
+    setMensaje('');
+    try {
+      await api.patch(`/turnos/${turno.id}/${accion === 'aceptar' ? 'confirmar' : 'rechazar'}`);
+      setMensaje(accion === 'aceptar' ? 'Â¡Listo! Confirmaste tu turno.' : 'Rechazaste el turno.');
+      setRechazando(null);
+      await cargar();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setEnviando(null);
+    }
+  };
+
+  const ordenados = [...turnos].sort((a, b) => (ORDEN[a.estado] ?? 9) - (ORDEN[b.estado] ?? 9));
+  const porResponder = turnos.filter((t) => t.estado === 'otorgado').length;
+
+  return (
+    <div className="pac">
+      <header className="pac-barra">
+        <Link to="/paciente" className="pac-marca"><span className="pac-logo" aria-hidden="true" /><strong>PAMI</strong></Link>
+        <div className="pac-usuario">
+          <span>{user?.nombre || user?.email}</span>
+          <button type="button" className="pac-boton pac-boton--claro" onClick={logout}>Salir</button>
+        </div>
+      </header>
+
+      <main className="pac-contenido">
+        <Link to="/paciente" className="pac-volver">â† Inicio</Link>
+        <h1>Mis turnos</h1>
+        {porResponder > 0 && (
+          <p className="pac-aviso" role="status">
+            TenÃ©s {porResponder} {porResponder === 1 ? 'turno' : 'turnos'} para aceptar o rechazar.
+          </p>
+        )}
+        {mensaje && <p className="pac-ok" role="status">{mensaje}</p>}
+        {error && <p className="pac-error" role="alert">{error}</p>}
+        {cargando && <p>Cargando tus turnosâ€¦</p>}
+
+        {!cargando && !error && turnos.length === 0 && (
+          <div className="pac-vacio">
+            <p>TodavÃ­a no pediste ningÃºn turno.</p>
+            <Link to="/paciente/turnos/nuevo" className="pac-boton pac-boton--primario">Pedir un turno</Link>
+          </div>
+        )}
+
+        <ul className="pac-lista">
+          {ordenados.map((t) => (
+            <li key={t.id} className={`pac-turno pac-turno--${t.estado}`}>
+              <div className="pac-turno-fila">
+                <h2>{t.especialidad}</h2>
+                <span className={`pac-badge pac-badge--${t.estado}`}>{ETIQUETA[t.estado] || t.estado}</span>
+              </div>
+              <p className="pac-fecha">
+                {t.estado === 'solicitado' ? 'Fecha que pediste: ' : ''}
+                {fechaLarga(t.fecha_hora)}
+              </p>
+              <p className="pac-motivo">Motivo: {t.motivo}</p>
+
+              {t.estado === 'otorgado' && rechazando !== t.id && (
+                <div className="pac-acciones">
+                  <button type="button" className="pac-boton pac-boton--aceptar" disabled={enviando === t.id} onClick={() => responder(t, 'aceptar')}>
+                    âœ” Aceptar turno
+                  </button>
+                  <button type="button" className="pac-boton pac-boton--rechazar" disabled={enviando === t.id} onClick={() => setRechazando(t.id)}>
+                    âœ– Rechazar
+                  </button>
+                </div>
+              )}
+              {rechazando === t.id && (
+                <div className="pac-confirmar" role="alertdialog" aria-label="Confirmar rechazo">
+                  <p>Â¿Seguro que querÃ©s rechazar este turno?</p>
+                  <div className="pac-acciones">
+                    <button type="button" className="pac-boton pac-boton--rechazar" disabled={enviando === t.id} onClick={() => responder(t, 'rechazar')}>
+                      SÃ­, rechazar
+                    </button>
+                    <button type="button" className="pac-boton" onClick={() => setRechazando(null)}>No, volver</button>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </main>
+    </div>
+  );
+}
+=== SolicitarTurno.jsx ===
+import { useCallback, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { api } from '../services/api';
+import { reconocimientoSoportado, sintesisSoportada } from '../services/voz';
+import { ESTADO, useSolicitudVoz } from '../hooks/useSolicitudVoz';
+import { ESPECIALIDADES } from '../utils/parseTurno';
+import '../styles/solicitud.css';
+
+// El backend guarda `origen: "manual" | "voz"` en cada solicitud (tarea J4 del Sprint 1).
+// Si se conecta este front a una versiÃ³n vieja del backend que lo rechaza, poner en false.
+const ENVIAR_ORIGEN = true;
+
+const ETIQUETA = {
+  [ESTADO.QUIETO]: 'PodÃ©s pedir el turno hablando',
+  [ESTADO.HABLANDO]: 'Hablandoâ€¦',
+  [ESTADO.ESCUCHANDO]: 'Te escucho, hablÃ¡ ahora',
+  [ESTADO.ENVIANDO]: 'Enviando tu pedidoâ€¦',
+};
+
+const VACIO = { especialidad: '', fecha: '', hora: '', motivo: '' };
+const hoyIso = () => {
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
+};
+
+export default function SolicitarTurno() {
+  const [datos, setDatos] = useState(VACIO);
+  const [error, setError] = useState('');
+  const [creado, setCreado] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+  const datosRef = useRef(datos);
+  const usoVoz = useRef(false);
+
+  const setCampo = useCallback((campo, valor) => {
+    setDatos((prev) => {
+      const nuevo = { ...prev, [campo]: valor };
+      datosRef.current = nuevo;
+      return nuevo;
+    });
+  }, []);
+
+  // Se usa tanto desde el botÃ³n como desde la voz (lee siempre los datos mÃ¡s recientes)
+  const enviar = useCallback(async () => {
+    const d = datosRef.current;
+    const cuerpo = {
+      especialidad: d.especialidad,
+      fecha_hora: `${d.fecha}T${d.hora}:00`, // hora local, igual que el resto de la app
+      motivo: d.motivo,
+    };
+    if (ENVIAR_ORIGEN) cuerpo.origen = usoVoz.current ? 'voz' : 'manual';
+    setEnviando(true);
+    setError('');
+    try {
+      setCreado(await api.post('/turnos', cuerpo));
+    } catch (e) {
+      setError(e.message);
+      throw e;
+    } finally {
+      setEnviando(false);
+    }
+  }, []);
+
+  const voz = useSolicitudVoz({ datos, setCampo, enviar });
+
+  const alEnviarManual = async (e) => {
+    e.preventDefault();
+    voz.detener();
+    try {
+      await enviar();
+    } catch {
+      /* el error ya quedÃ³ en pantalla */
+    }
+  };
+
+  const empezarVoz = () => {
+    usoVoz.current = true;
+    voz.iniciar();
+  };
+
+  if (creado) {
+    return (
+      <main className="sol-pagina">
+        <h1>Â¡Pedido enviado!</h1>
+        <p className="sol-ok" role="status">
+          Pediste un turno de <strong>{creado.especialidad}</strong>. Te vamos a avisar cuando te lo otorguen.
+        </p>
+        <div className="sol-acciones">
+          <button type="button" className="sol-principal" onClick={() => { setCreado(null); setDatos(VACIO); datosRef.current = VACIO; usoVoz.current = false; }}>
+            Pedir otro turno
+          </button>
+          <Link to="/paciente" className="sol-link">Volver al inicio</Link>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="sol-pagina">
+      <Link to="/paciente" className="sol-link">â† Inicio</Link>
+      <h1>Pedir un turno</h1>
+
+      <section className="sol-voz" aria-labelledby="sol-voz-titulo">
+        <h2 id="sol-voz-titulo">Pedirlo con la voz</h2>
+        {!sintesisSoportada || !reconocimientoSoportado ? (
+          <p className="sol-alerta" role="status">
+            Este navegador no permite pedir el turno hablando. CompletÃ¡ el formulario de abajo
+            (la voz funciona en Chrome o Edge).
+          </p>
+        ) : (
+          <>
+            <div className={`sol-estado sol-estado--${voz.estado}`} role="status" aria-live="polite">
+              <span className="sol-punto" aria-hidden="true" />
+              {ETIQUETA[voz.estado]}
+            </div>
+            {voz.activo && voz.mensaje && <p className="sol-subtitulo">â€œ{voz.mensaje}â€</p>}
+            {voz.activo && voz.oido && <p>EntendÃ­: <strong>{voz.oido}</strong></p>}
+            {voz.aviso && <p className="sol-alerta" role="alert">{voz.aviso}</p>}
+            {!voz.activo ? (
+              <button type="button" className="sol-principal" onClick={empezarVoz}>ðŸŽ¤ Pedir turno hablando</button>
+            ) : (
+              <button type="button" className="sol-peligro" onClick={voz.detener}>â¹ Parar</button>
+            )}
+            <p className="sol-ayuda">Te voy a preguntar: especialidad, dÃ­a, hora y motivo. PodÃ©s decir â€œpararâ€ cuando quieras.</p>
+          </>
+        )}
+      </section>
+
+      <form className="sol-form" onSubmit={alEnviarManual}>
+        <h2>Datos del turno</h2>
+        <label>
+          Especialidad
+          <select value={datos.especialidad} onChange={(e) => setCampo('especialidad', e.target.value)} required>
+            <option value="">ElegÃ­ unaâ€¦</option>
+            {ESPECIALIDADES.map((esp) => <option key={esp} value={esp}>{esp}</option>)}
+          </select>
+        </label>
+        <label>
+          DÃ­a
+          <input type="date" min={hoyIso()} value={datos.fecha} onChange={(e) => setCampo('fecha', e.target.value)} required />
+        </label>
+        <label>
+          Hora
+          <input type="time" value={datos.hora} onChange={(e) => setCampo('hora', e.target.value)} required />
+        </label>
+        <label>
+          Motivo de la consulta
+          <textarea rows={3} minLength={3} maxLength={300} value={datos.motivo} onChange={(e) => setCampo('motivo', e.target.value)} required />
+        </label>
+
+        {error && <p className="sol-alerta" role="alert">{error}</p>}
+        <button type="submit" className="sol-principal" disabled={enviando}>
+          {enviando ? 'Enviandoâ€¦' : 'Solicitar turno'}
+        </button>
+      </form>
+    </main>
+  );
+}
+=== solicitud.css ===
+/* Solicitud de turno - DiseÃ±o frÃ­o y profesional */
+.sol-pagina {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  background: linear-gradient(180deg, var(--bg-color) 0, var(--bg-secondary) 100%);
+  min-height: 100vh;
+  color: var(--text-primary);
+}
+
+.sol-pagina h1 {
+  font-size: 1.8rem;
+  margin: 0.75rem 0 1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.sol-pagina h2 {
+  font-size: 1.3rem;
+  margin: 0 0 0.75rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.sol-pagina button,
+.sol-link {
+  min-height: 48px;
+  padding: 0.7rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.sol-pagina button:focus-visible,
+.sol-link:focus-visible,
+.sol-form select:focus-visible,
+.sol-form input:focus-visible,
+.sol-form textarea:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.sol-pagina button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sol-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding-left: 0;
+  gap: 0.4rem;
+}
+
+.sol-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.sol-voz {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem 1.25rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.sol-estado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border-color);
+}
+
+.sol-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+
+.sol-estado--hablando {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.sol-estado--hablando .sol-punto {
+  background: var(--primary-color);
+  animation: sol-pulso 1s infinite;
+}
+
+.sol-estado--escuchando {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.sol-estado--escuchando .sol-punto {
+  background: var(--success-color);
+  animation: sol-pulso 0.7s infinite;
+}
+
+.sol-estado--enviando {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.sol-estado--enviando .sol-punto {
+  background: var(--warning-color);
+}
+
+@keyframes sol-pulso {
+  50% {
+    transform: scale(1.3);
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sol-punto {
+    animation: none !important;
+  }
+}
+
+.sol-subtitulo {
+  font-style: italic;
+  margin: 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+.sol-ayuda {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 0;
+  margin-top: 0.75rem;
+}
+
+.sol-form {
+  display: grid;
+  gap: 1rem;
+  background: var(--card-bg);
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.sol-form h2 {
+  margin-top: 0;
+}
+
+.sol-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.sol-form select,
+.sol-form input,
+.sol-form textarea {
+  font-size: 1rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-family: inherit;
+  font-weight: 400;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.sol-form select:focus,
+.sol-form input:focus,
+.sol-form textarea:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-color: var(--primary-color);
+}
+
+.sol-principal {
+  background: var(--primary-color);
+  color: #fff;
+  width: 100%;
+  min-height: 48px !important;
+  font-size: 1rem !important;
+  border-color: var(--primary-color);
+}
+
+.sol-principal:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.sol-peligro {
+  background: var(--danger-color);
+  color: #fff;
+  width: 100%;
+  border-color: var(--danger-color);
+}
+
+.sol-peligro:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.sol-alerta {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.sol-ok {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.sol-acciones {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
