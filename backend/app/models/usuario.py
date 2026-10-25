@@ -1,6 +1,17 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+# Preferencias de accesibilidad con las que arranca cada usuario
+PREFERENCIAS_POR_DEFECTO = {
+    "tamano_letra": "normal",  # normal | grande | muy_grande
+    "alto_contraste": False,
+    "voz_activada": True,
+}
+
+
+def preferencias_por_defecto() -> dict:
+    return dict(PREFERENCIAS_POR_DEFECTO)
+
 
 @dataclass
 class Usuario:
@@ -12,6 +23,7 @@ class Usuario:
     intentos_fallidos: int = 0
     bloqueado_hasta: datetime | None = None
     rol: str = field(init=False, default="")
+    preferencias: dict = field(init=False, default_factory=preferencias_por_defecto)
 
     def actualizar_datos(self, **datos):
         for k, v in datos.items():

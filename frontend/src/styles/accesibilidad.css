@@ -1,0 +1,295 @@
+/* Accesibilidad: pantalla /accesibilidad y modo de alto contraste */
+
+/* ---------- Pantalla ---------- */
+.acc-aviso {
+  margin: 0 0 1.25rem;
+}
+
+.acc-aviso p {
+  margin: 0;
+}
+
+.acc-bloque {
+  min-width: 0;
+  margin: 0 0 1.25rem;
+  padding: 1.5rem 1.6rem 1.8rem;
+  color: var(--p-tinta);
+  background: var(--p-hielo);
+  border: 0;
+  clip-path: var(--corte);
+}
+
+.acc-bloque legend {
+  padding: 0 0 0.8rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--p-tinta);
+}
+
+/* Tamaño de letra: tres botones grandes */
+.acc-opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.8rem;
+}
+
+.acc-opcion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 68px;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--p-tinta);
+  background: #eef5fa;
+  border: 2px solid #24405a;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.acc-opcion--normal {
+  font-size: 1rem;
+}
+
+.acc-opcion--grande {
+  font-size: 1.25rem;
+}
+
+.acc-opcion--muy-grande {
+  font-size: 1.5rem;
+}
+
+.acc-opcion input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.acc-opcion:has(input:checked) {
+  color: #fff;
+  background: var(--p-tinta);
+}
+
+.acc-opcion:has(input:focus-visible) {
+  outline: 3px solid var(--p-tinta);
+  outline-offset: 3px;
+}
+
+/* Interruptores */
+.acc-interruptor {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  padding: 0.9rem 1rem;
+  background: #eef5fa;
+  border: 2px solid #24405a;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.acc-interruptor:last-child {
+  margin-bottom: 0;
+}
+
+.acc-interruptor-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.acc-interruptor-texto strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.acc-interruptor-texto small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1rem;
+  line-height: 1.35;
+  color: #1f3a52;
+}
+
+.acc-estado {
+  flex: none;
+  font-family: var(--f-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.acc-interruptor input {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 60px;
+  height: 34px;
+  margin: 0;
+  background: #6d879c;
+  border: 2px solid #24405a;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.acc-interruptor input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.acc-interruptor input:checked {
+  background: #14795a;
+}
+
+.acc-interruptor input:checked::after {
+  transform: translateX(26px);
+}
+
+.acc-interruptor input:focus-visible {
+  outline: 3px solid var(--p-tinta);
+  outline-offset: 3px;
+}
+
+/* Vista previa */
+.acc-vista h2 {
+  margin: 1.75rem 0 1rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: 1.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.acc-muestra-titulo {
+  margin: 0;
+  font-family: var(--f-titulo);
+  font-size: 1.7rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--p-tinta);
+}
+
+/* ---------- Alto contraste (clase acc-alto-contraste en <html>) ---------- */
+html.acc-alto-contraste .pac,
+html.acc-alto-contraste .login,
+html.acc-alto-contraste .rec,
+html.acc-alto-contraste .adm,
+html.acc-alto-contraste .sol-pagina,
+html.acc-alto-contraste .cn {
+  --p-oscuro: #000;
+  --p-hielo: #fff;
+  --p-hielo-claro: #fff;
+  --p-tinta: #000;
+  --p-suave: #fff;
+  --p-linea: #fff;
+}
+
+html.acc-alto-contraste body {
+  background: #000;
+}
+
+html.acc-alto-contraste body::before,
+html.acc-alto-contraste body::after {
+  display: none;
+}
+
+html.acc-alto-contraste .pac,
+html.acc-alto-contraste .login-marco,
+html.acc-alto-contraste .rec,
+html.acc-alto-contraste .adm,
+html.acc-alto-contraste .sol-pagina {
+  background: #000;
+  box-shadow: 0 0 0 3px #fff;
+}
+
+html.acc-alto-contraste .pac::before,
+html.acc-alto-contraste .login-marco::before,
+html.acc-alto-contraste .rec::before,
+html.acc-alto-contraste .adm::before,
+html.acc-alto-contraste .sol-pagina::before {
+  display: none;
+}
+
+/* Botones principales: amarillos, se distinguen sobre fondo negro y sobre tarjetas blancas */
+html.acc-alto-contraste .pac-boton--primario,
+html.acc-alto-contraste .rec-boton--primario,
+html.acc-alto-contraste .adm-boton--primario,
+html.acc-alto-contraste .login-boton,
+html.acc-alto-contraste .sol-pagina .sol-principal {
+  color: #000;
+  background: #ffd400;
+  border: 2px solid #000;
+}
+
+html.acc-alto-contraste .pac-boton--primario:hover:not(:disabled),
+html.acc-alto-contraste .rec-boton--primario:hover:not(:disabled),
+html.acc-alto-contraste .adm-boton--primario:hover:not(:disabled),
+html.acc-alto-contraste .login-boton:hover:not(:disabled),
+html.acc-alto-contraste .sol-pagina .sol-principal:hover:not(:disabled) {
+  color: #000;
+  background: #fff1a0;
+}
+
+html.acc-alto-contraste .pac-boton--primario:disabled,
+html.acc-alto-contraste .rec-boton--primario:disabled,
+html.acc-alto-contraste .adm-boton--primario:disabled,
+html.acc-alto-contraste .login-boton:disabled,
+html.acc-alto-contraste .sol-pagina .sol-principal:disabled {
+  color: #000;
+  background: #bdbdbd;
+}
+
+html.acc-alto-contraste .pac-opcion:hover,
+html.acc-alto-contraste .adm-tarjeta:hover {
+  background: #ffe97a;
+}
+
+/* Campos con borde grueso */
+html.acc-alto-contraste .login-campo input,
+html.acc-alto-contraste .sol-form select,
+html.acc-alto-contraste .sol-form input,
+html.acc-alto-contraste .sol-form textarea,
+html.acc-alto-contraste .rec input,
+html.acc-alto-contraste .rec textarea,
+html.acc-alto-contraste .adm-otorgar select,
+html.acc-alto-contraste .adm-otorgar input {
+  color: #000;
+  background: #fff;
+  border: 3px solid #000;
+}
+
+html.acc-alto-contraste .acc-opcion,
+html.acc-alto-contraste .acc-interruptor {
+  background: #fff;
+  border: 3px solid #000;
+}
+
+/* Textos secundarios en negro puro sobre las tarjetas blancas */
+html.acc-alto-contraste .pac-opcion small,
+html.acc-alto-contraste .pac-motivo,
+html.acc-alto-contraste .sol-ayuda,
+html.acc-alto-contraste .sol-subtitulo,
+html.acc-alto-contraste .adm-tarjeta-ayuda,
+html.acc-alto-contraste .adm-turno-paciente span,
+html.acc-alto-contraste .adm-datos dt,
+html.acc-alto-contraste .adm-dato-ancho dd,
+html.acc-alto-contraste .acc-interruptor-texto small,
+html.acc-alto-contraste .cn-texto small {
+  color: #000;
+}

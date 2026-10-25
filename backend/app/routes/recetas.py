@@ -4,6 +4,7 @@ from flask_jwt_extended import get_jwt_identity
 from app.repositories.receta_repository import RecetaRepository
 from app.repositories.usuario_repository import UsuarioRepository
 from app.schemas.receta import PlanSchema, RecetaCrearSchema, RecetaEditarSchema
+from app.security.auditoria import registrar_acceso
 from app.security.roles import roles_required
 from app.services.receta_service import (
     PacienteInvalido,
@@ -96,6 +97,7 @@ def listar_propias():
         description: El rol no tiene permiso
     """
     recetas = _service().listar_del_medico(get_jwt_identity())
+    registrar_acceso("recetas_del_medico")
     return jsonify([serializar_receta(r) for r in recetas])
 
 
@@ -114,6 +116,7 @@ def mis_recetas():
         description: El rol no tiene permiso
     """
     recetas = _service().listar_del_paciente(get_jwt_identity())
+    registrar_acceso("recetas_del_paciente")
     return jsonify([serializar_receta(r) for r in recetas])
 
 

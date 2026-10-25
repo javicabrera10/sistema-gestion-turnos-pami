@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { callar, cancelarEscucha, escuchar, hablar } from '../services/voz';
+import { callar, cancelarEscucha, escuchar, hablar, pedirMicrofono } from '../services/voz';
 import { INTENCION, esOrdenDeSalir, interpretar } from '../utils/comandosVoz';
 import {
   aFechaHora,
@@ -12,7 +12,14 @@ import {
 
 export const ESTADO = { QUIETO: 'quieto', HABLANDO: 'hablando', ESCUCHANDO: 'escuchando', ENVIANDO: 'enviando' };
 
-const INTENTOS = 2;
+const INTENTOS = 3;
+
+const MENSAJES_ERROR = {
+  'permiso-denegado': 'El micrófono está bloqueado. Completá el formulario a mano.',
+  'sin-microfono': 'No encontramos un micrófono. Completá el formulario a mano.',
+  'sin-red': 'No pudimos conectar con el servicio de voz del navegador. Revisá tu conexión o completá el formulario a mano.',
+  'no-soportado': 'Este navegador no permite hablar con la aplicación. Completá el formulario a mano.',
+};
 
 // Guía por voz para pedir un turno: pregunta especialidad, día, hora y motivo,
 // completa el formulario, lee el resumen y envía si la persona dice "sí".
@@ -63,19 +70,14 @@ export function useSolicitudVoz({ datos, setCampo, enviar }) {
         if (!vigente()) return { salir: true };
         await new Promise((r) => setTimeout(r, 400)); // que no se escuche a sí mismo
         if (!vigente()) return { salir: true };
-        setEstado(ESTADO.ESCUCHANDO);
         setOido('');
         let texto;
         try {
-          texto = await escuchar({ tiempoMs: 9000 });
+          // El cartel "Te escucho" aparece recién cuando el micrófono abrió de verdad
+          texto = await escuchar({ alEscuchar: () => { if (vigente()) setEstado(ESTADO.ESCUCHANDO); } });
         } catch (e) {
           if (!vigente()) return { salir: true };
-          return {
-            error:
-              e.message === 'permiso-denegado'
-                ? 'El micrófono está bloqueado. Completá el formulario a mano.'
-                : 'Este navegador no permite hablar con la aplicación. Completá el formulario a mano.',
-          };
+          return { error: MENSAJES_ERROR[e.message] || MENSAJES_ERROR['no-soportado'] };
         }
         if (!vigente()) return { salir: true };
         const alternativas = texto.split('|').map((a) => a.trim()).filter(Boolean);
@@ -109,6 +111,14 @@ export function useSolicitudVoz({ datos, setCampo, enviar }) {
       await decir(texto, vigente);
       if (vigente()) detener();
     };
+
+    // Se pide el permiso del micrófono ahora, antes de empezar a conversar
+    const falloMic = await pedirMicrofono();
+    if (!vigente()) return;
+    if (falloMic) {
+      setAviso(MENSAJES_ERROR[falloMic]);
+      return cortar(MENSAJES_ERROR[falloMic]);
+    }
 
     // Cada paso: [campo, pregunta, lector, frase al anotar]
     const pasos = [

@@ -1,18 +1,96 @@
-﻿:root {
+:root {
   --font-size-base: 16px;
-  --bg-color: #f4f4f9;
-  --text-color: #333;
-  --primary-color: #0056b3;
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+  
+  /* Paleta fría - estilo ártico/profesional */
+  --bg-color: #0b0f19;
+  --bg-secondary: #0f172a;
+  --card-bg: #1e293b;
+  --panel-bg: #1e293b;
+  --border-color: #334155;
+  --border-color-light: #475569;
+  
+  /* Textos */
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  /* Botones e interactivos */
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-active: #1d4ed8;
+  
+  /* Estados */
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #06b6d4;
+  
+  /* Sombras suaves */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
+
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-family);
   font-size: var(--font-size-base);
   background-color: var(--bg-color);
-  color: var(--text-color);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
 button {
-  padding: 10px;
-  cursor: pointer;
+  font-family: var(--font-family);
   font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Accesibilidad: tamaño de letra elegido por el usuario (clase en <html>, ver AccesibilidadContext) */
+html.acc-letra-grande {
+  font-size: 125%;
+  --font-size-base: 20px;
+}
+
+html.acc-letra-muy-grande {
+  font-size: 150%;
+  --font-size-base: 24px;
 }

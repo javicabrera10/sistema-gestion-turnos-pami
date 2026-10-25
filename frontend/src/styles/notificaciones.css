@@ -1,43 +1,183 @@
-/* Campana de avisos: se usa dentro de la barra superior de .pac y de .adm (heredan sus variables de color) */
-.cn { position: relative; }
+﻿/* Campana de avisos - estilo "azul acero / hielo" (se usa dentro de .pac y .adm) */
+.cn {
+  --p-hielo: #b7cde0;
+  --p-tinta: #12293d;
+  --f-titulo: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
+  --f-mono: 'Space Mono', ui-monospace, 'Courier New', monospace;
+  position: relative;
+}
 
 .cn-boton {
-  position: relative; font: inherit; font-size: 1.25rem; line-height: 1; padding: 0.45rem 0.65rem; border-radius: 10px;
-  cursor: pointer; background: transparent; color: #fff; border: 2px solid rgba(255, 255, 255, 0.7);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #fff;
+  background: transparent;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
-.cn-boton:hover { background: rgba(255, 255, 255, 0.15); }
-.cn-boton:focus-visible, .cn-leida:focus-visible { outline: 3px solid var(--amarillo, #f5b400); outline-offset: 2px; }
+
+.cn-boton:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.cn-boton:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
 
 .cn-contador {
-  position: absolute; top: -9px; right: -9px; min-width: 1.35rem; height: 1.35rem; padding: 0 0.25rem; box-sizing: border-box;
-  display: flex; align-items: center; justify-content: center; border-radius: 999px; border: 2px solid #fff;
-  background: var(--rojo, #b00020); color: #fff; font-size: 0.75rem; font-weight: 800;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.3rem;
+  box-sizing: border-box;
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: #a62d2d;
+  border: 2px solid #fff;
+  border-radius: 999px;
 }
 
 .cn-panel {
-  position: absolute; right: 0; top: calc(100% + 0.6rem); z-index: 50; width: min(92vw, 380px);
-  background: #fff; color: #1d2733; border-radius: 14px; padding: 0.85rem; text-align: left;
-  box-shadow: 0 12px 32px rgba(0, 30, 70, 0.3);
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.7rem);
+  z-index: 50;
+  width: min(92vw, 400px);
+  padding: 1.1rem;
+  font-size: 1rem;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--p-tinta);
+  background: var(--p-hielo);
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(8, 20, 32, 0.5);
 }
-.cn-titulo { margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--azul-oscuro, #003d80); }
-.cn-vacio { margin: 0.5rem 0; color: #5c6b7a; }
-.cn-error { margin: 0 0 0.5rem; padding: 0.5rem 0.7rem; border-radius: 8px; background: #fdeaed; border: 1px solid var(--rojo, #b00020); color: #7d0017; }
 
-.cn-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; max-height: 60vh; overflow-y: auto; }
-.cn-item { display: flex; gap: 0.6rem; padding: 0.6rem 0.7rem; border-radius: 10px; border: 1px solid var(--borde, #d9e2ee); background: #fff; }
-.cn-item--nueva { background: var(--azul-claro, #e8f1fb); border-color: var(--azul, #0056b3); }
-.cn-icono { flex: none; font-size: 1.3rem; line-height: 1.3; }
-.cn-texto { min-width: 0; }
-.cn-texto p { margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
-.cn-texto small { display: block; margin-top: 0.2rem; color: #5c6b7a; }
+.cn-titulo {
+  margin: 0 0 0.7rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--p-tinta);
+}
+
+.cn-vacio {
+  margin: 0.5rem 0;
+  color: #1f3a52;
+}
+
+.cn-error {
+  margin: 0 0 0.6rem;
+  padding: 0.6rem 0.8rem;
+  color: #6b1313;
+  background: #f8d7d7;
+  border-left: 6px solid #a62d2d;
+  border-radius: 6px;
+}
+
+.cn-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.cn-item {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  background: #dbe8f2;
+  border: 1px solid #9fb8cc;
+  border-radius: 6px;
+}
+
+/* Aviso sin leer: fondo blanco y barra oscura a la izquierda */
+.cn-item--nueva {
+  background: #fff;
+  border-color: var(--p-tinta);
+  box-shadow: inset 5px 0 0 var(--p-tinta);
+}
+
+.cn-icono {
+  flex: none;
+  font-size: 1.3rem;
+  line-height: 1.3;
+}
+
+.cn-texto {
+  min-width: 0;
+}
+
+.cn-texto p {
+  margin: 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.cn-texto small {
+  display: block;
+  margin-top: 0.3rem;
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  color: #24405a;
+}
+
 .cn-leida {
-  margin-top: 0.4rem; font: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 8px; cursor: pointer;
-  background: #fff; color: var(--azul, #0056b3); border: 2px solid var(--azul, #0056b3);
+  min-height: 40px;
+  margin-top: 0.5rem;
+  padding: 0.35rem 1rem;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--p-tinta);
+  background: transparent;
+  border: 1.5px solid var(--p-tinta);
+  border-radius: 999px;
+  cursor: pointer;
 }
-.cn-leida:hover { background: var(--azul-claro, #e8f1fb); }
 
-/* En pantallas chicas el panel ocupa el ancho de la pantalla para que no se salga */
+.cn-leida:hover {
+  background: #fff;
+}
+
+.cn-leida:focus-visible {
+  outline: 3px solid var(--p-tinta);
+  outline-offset: 2px;
+}
+
+/* En pantallas chicas el panel ocupa el ancho de la pantalla */
 @media (max-width: 520px) {
-  .cn { position: static; }
-  .cn-panel { position: fixed; left: 0.5rem; right: 0.5rem; top: 4.5rem; width: auto; }
+  .cn {
+    position: static;
+  }
+
+  .cn-panel {
+    position: fixed;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 4.5rem;
+    width: auto;
+  }
 }

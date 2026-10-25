@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { reconocimientoSoportado, sintesisSoportada } from '../services/voz';
 import { ESTADO, useSolicitudVoz } from '../hooks/useSolicitudVoz';
 import { ESPECIALIDADES } from '../utils/parseTurno';
+import { useAccesibilidad } from '../context/AccesibilidadContext';
 import '../styles/solicitud.css';
 
 // El backend guarda `origen: "manual" | "voz"` en cada solicitud (tarea J4 del Sprint 1).
@@ -24,6 +25,7 @@ const hoyIso = () => {
 };
 
 export default function SolicitarTurno() {
+  const { preferencias } = useAccesibilidad();
   const [datos, setDatos] = useState(VACIO);
   const [error, setError] = useState('');
   const [creado, setCreado] = useState(null);
@@ -99,6 +101,7 @@ export default function SolicitarTurno() {
       <Link to="/paciente" className="sol-link">← Inicio</Link>
       <h1>Pedir un turno</h1>
 
+      {preferencias.voz_activada && (
       <section className="sol-voz" aria-labelledby="sol-voz-titulo">
         <h2 id="sol-voz-titulo">Pedirlo con la voz</h2>
         {!sintesisSoportada || !reconocimientoSoportado ? (
@@ -124,6 +127,7 @@ export default function SolicitarTurno() {
           </>
         )}
       </section>
+      )}
 
       <form className="sol-form" onSubmit={alEnviarManual}>
         <h2>Datos del turno</h2>

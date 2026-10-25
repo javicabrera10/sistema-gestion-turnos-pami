@@ -3,14 +3,16 @@ from flask_cors import CORS
 from pydantic import ValidationError
 from pymongo import MongoClient
 
-from .config import Config
+from .config import Config, validar_configuracion
 from .extensions import jwt, limiter, swagger
 from .patterns.observer import EventBus
+from .security.headers import registrar_encabezados
 
 
 def create_app(config_class=Config, db=None):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    validar_configuracion(app)  # no arranca si faltan SECRET_KEY o JWT_SECRET_KEY
 
     CORS(app, origins=app.config["CORS_ORIGINS"])
     jwt.init_app(app)
@@ -47,6 +49,7 @@ def create_app(config_class=Config, db=None):
     app.register_blueprint(notificaciones_bp, url_prefix="/api/notificaciones")
     app.register_blueprint(recordatorios_bp, url_prefix="/api/recordatorios")
     registrar_observers(app)
+    registrar_encabezados(app)
 
     @app.errorhandler(ValidationError)
     def datos_invalidos(e):
