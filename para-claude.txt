@@ -1,43 +1,644 @@
-﻿=== MisTurnos.jsx ===
-import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+﻿=== MedicoRecetas.jsx ===
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import '../styles/paciente.css';
+import '../styles/receta.css';
+
+// El backend acepta /api/recetas con y sin barra final (strict_slashes=False), así que no hay 308.
+const RUTA_RECETAS = '/recetas';
+
+const MED_VACIO = { nombre: '', dosis: '', horario_toma: '' };
+
+export default function MedicoRecetas() {
+  const { user, logout } = useAuth();
+  const [tipo, setTipo] = useState('receta'); // 'receta' | 'orden'
+
+  // Paciente: se busca por DNI; si el backend no tiene la búsqueda, se carga el ID a mano
+  const [dni, setDni] = useState('');
+  const [paciente, setPaciente] = useState(null); // { id, nombre, dni }
+  const [busqueda, setBusqueda] = useState({ estado: 'idle', texto: '' });
+  const [pacienteIdManual, setPacienteIdManual] = useState('');
+  const [modoManual, setModoManual] = useState(false);
+
+  const [medicamentos, setMedicamentos] = useState([{ ...MED_VACIO }]);
+  const [indicaciones, setIndicaciones] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [resultado, setResultado] = useState(null); // { ok, texto }
+  const [historial, setHistorial] = useState([]); // lo creado en esta sesión
+
+  const pacienteId = paciente?.id || pacienteIdManual.trim();
+
+  const buscarPaciente = async () => {
+    setPaciente(null);
+    if (!/^\d{7,8}$/.test(dni.trim())) {
+      setBusqueda({ estado: 'error', texto: 'El DNI tiene 7 u 8 números, sin puntos.' });
+      return;
+    }
+    setBusqueda({ estado: 'buscando', texto: '' });
+    try {
+      const lista = await api.get(`/pacientes?dni=${dni.trim()}`);
+      if (lista.length === 0) setBusqueda({ estado: 'error', texto: 'No encontramos un paciente con ese DNI.' });
+      else {
+        setPaciente(lista[0]);
+        setBusqueda({ estado: 'ok', texto: '' });
+      }
+    } catch {
+      setModoManual(true);
+      setBusqueda({ estado: 'error', texto: 'La búsqueda por DNI todavía no está disponible. Cargá el ID del paciente.' });
+    }
+  };
+
+  const cambiarMed = (i, campo, valor) =>
+    setMedicamentos((prev) => prev.map((m, j) => (j === i ? { ...m, [campo]: valor } : m)));
+
+  const limpiar = () => {
+    setMedicamentos([{ ...MED_VACIO }]);
+    setIndicaciones('');
+    setDni('');
+    setPaciente(null);
+    setPacienteIdManual('');
+    setBusqueda({ estado: 'idle', texto: '' });
+  };
+
+  const guardar = async (emitir) => {
+    setResultado(null);
+    if (!pacienteId) return setResultado({ ok: false, texto: 'Elegí un paciente primero.' });
+    if (tipo === 'receta' && medicamentos.some((m) => !m.nombre.trim() || !m.dosis.trim() || !m.horario_toma.trim())) {
+      return setResultado({ ok: false, texto: 'Completá nombre, dosis y horario de cada medicamento.' });
+    }
+    if (tipo === 'orden' && indicaciones.trim().length < 3) {
+      return setResultado({ ok: false, texto: 'Escribí qué estudio o práctica indicás.' });
+    }
+
+    setEnviando(true);
+    try {
+      // tipo: 'receta' lleva medicamentos; 'orden' (estudio o práctica) lleva todo en las indicaciones.
+      const creada = await api.post(RUTA_RECETAS, {
+        paciente_id: pacienteId,
+        tipo,
+        indicaciones: indicaciones.trim(),
+        medicamentos: tipo === 'receta' ? medicamentos.map((m) => ({ nombre: m.nombre.trim(), dosis: m.dosis.trim(), horario_toma: m.horario_toma.trim() })) : [],
+      });
+      if (emitir) await api.post(`/recetas/${creada.id}/emitir`);
+      const nombre = paciente?.nombre || `paciente ${pacienteId}`;
+      setHistorial((h) => [{ id: creada.id, tipo, nombre, emitida: emitir }, ...h]);
+      setResultado({ ok: true, texto: `${tipo === 'receta' ? 'Receta' : 'Orden'} ${emitir ? 'emitida al paciente' : 'guardada como borrador'}.` });
+      limpiar();
+    } catch (e) {
+      setResultado({ ok: false, texto: e.message });
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="rec">
+      <header className="rec-barra">
+        <div className="rec-marca"><span className="rec-logo" aria-hidden="true" /><div><strong>PAMI</strong><span>Panel médico</span></div></div>
+        <div className="rec-usuario">
+          <span>{user?.nombre || user?.email}</span>
+          <button type="button" className="rec-boton rec-boton--claro" onClick={logout}>Salir</button>
+        </div>
+      </header>
+
+      <main className="rec-contenido">
+        <h1>Recetas y órdenes digitales</h1>
+        <p className="rec-sub">Generá el documento y emitilo al paciente.</p>
+
+        <div className="rec-tipos" role="tablist" aria-label="Tipo de documento">
+          {[['receta', '💊 Receta'], ['orden', '📋 Orden (estudio o práctica)']].map(([id, label]) => (
+            <button key={id} type="button" role="tab" aria-selected={tipo === id} className={`rec-tipo${tipo === id ? ' rec-tipo--activo' : ''}`} onClick={() => setTipo(id)}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <form className="rec-form" onSubmit={(e) => e.preventDefault()}>
+          <fieldset className="rec-bloque">
+            <legend>1. Paciente</legend>
+            {!modoManual ? (
+              <div className="rec-buscar">
+                <label>
+                  DNI del paciente
+                  <input inputMode="numeric" maxLength={8} placeholder="Ej. 12345678" value={dni} onChange={(e) => setDni(e.target.value.replace(/\D/g, ''))} />
+                </label>
+                <button type="button" className="rec-boton" onClick={buscarPaciente} disabled={busqueda.estado === 'buscando'}>
+                  {busqueda.estado === 'buscando' ? 'Buscando…' : 'Buscar'}
+                </button>
+              </div>
+            ) : (
+              <label>
+                ID del paciente
+                <input value={pacienteIdManual} onChange={(e) => setPacienteIdManual(e.target.value)} placeholder="Pegá el ID del paciente" />
+              </label>
+            )}
+            {paciente && <p className="rec-paciente">✔ {paciente.nombre} · DNI {paciente.dni}</p>}
+            {busqueda.estado === 'error' && <p className="rec-aviso">{busqueda.texto}</p>}
+          </fieldset>
+
+          {tipo === 'receta' ? (
+            <fieldset className="rec-bloque">
+              <legend>2. Medicamentos</legend>
+              {medicamentos.map((m, i) => (
+                <div key={i} className="rec-med">
+                  <div className="rec-med-cab">
+                    <strong>Medicamento {i + 1}</strong>
+                    {medicamentos.length > 1 && (
+                      <button type="button" className="rec-quitar" onClick={() => setMedicamentos((p) => p.filter((_, j) => j !== i))} aria-label={`Quitar medicamento ${i + 1}`}>Quitar</button>
+                    )}
+                  </div>
+                  <div className="rec-med-campos">
+                    <label>Nombre<input value={m.nombre} onChange={(e) => cambiarMed(i, 'nombre', e.target.value)} placeholder="Ej. Ibuprofeno" /></label>
+                    <label>Dosis<input value={m.dosis} onChange={(e) => cambiarMed(i, 'dosis', e.target.value)} placeholder="Ej. 400 mg" /></label>
+                    <label>Horario<input value={m.horario_toma} onChange={(e) => cambiarMed(i, 'horario_toma', e.target.value)} placeholder="Ej. Cada 8 horas" /></label>
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="rec-boton" onClick={() => setMedicamentos((p) => [...p, { ...MED_VACIO }])}>+ Agregar otro medicamento</button>
+            </fieldset>
+          ) : null}
+
+          <fieldset className="rec-bloque">
+            <legend>{tipo === 'receta' ? '3. Indicaciones (opcional)' : '2. Estudio o práctica indicada'}</legend>
+            <textarea
+              rows={4}
+              value={indicaciones}
+              onChange={(e) => setIndicaciones(e.target.value)}
+              placeholder={tipo === 'receta' ? 'Ej. Tomar después de las comidas.' : 'Ej. Radiografía de rodilla izquierda, frente y perfil.'}
+            />
+          </fieldset>
+
+          {resultado && <p className={resultado.ok ? 'rec-ok' : 'rec-error'} role={resultado.ok ? 'status' : 'alert'}>{resultado.texto}</p>}
+
+          <div className="rec-acciones">
+            <button type="button" className="rec-boton rec-boton--primario" disabled={enviando} onClick={() => guardar(true)}>
+              {enviando ? 'Enviando…' : `Emitir ${tipo} al paciente`}
+            </button>
+            <button type="button" className="rec-boton" disabled={enviando} onClick={() => guardar(false)}>Guardar borrador</button>
+          </div>
+        </form>
+
+        {historial.length > 0 && (
+          <section className="rec-historial" aria-labelledby="rec-hist">
+            <h2 id="rec-hist">Creadas en esta sesión</h2>
+            <ul>
+              {historial.map((h) => (
+                <li key={h.id}>
+                  <span>{h.tipo === 'receta' ? '💊' : '📋'} {h.nombre}</span>
+                  <span className={`rec-estado rec-estado--${h.emitida ? 'emitida' : 'borrador'}`}>{h.emitida ? 'Emitida' : 'Borrador'}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+=== receta.css ===
+.rec {
+  --azul: #3b82f6;
+  --azul-oscuro: #2563eb;
+  --azul-claro: #1e293b;
+  --amarillo: #f59e0b;
+  --verde: #10b981;
+  --rojo: #ef4444;
+  --borde: #334155;
+  --sombra: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--bg-color) 0, var(--bg-secondary) 260px);
+  color: var(--text-primary);
+}
+
+.rec-barra {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1.5rem;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+}
+
+.rec-marca {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.rec-marca div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.rec-marca strong {
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+.rec-marca span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.rec-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+  position: relative;
+}
+.rec-usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.rec-contenido {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+.rec-contenido h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.rec-sub {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--text-secondary);
+}
+
+.rec-boton {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+.rec-boton:hover:not(:disabled) {
+  background: var(--border-color);
+  border-color: var(--border-color-light);
+}
+.rec-boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rec-boton--primario {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+.rec-boton--primario:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.rec-boton--claro {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+.rec-boton--claro:hover:not(:disabled) {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+.rec button:focus-visible,
+.rec input:focus-visible,
+.rec textarea:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.rec-tipos {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.rec-tipo {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.55rem 1.1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+.rec-tipo:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+.rec-tipo--activo {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+.rec-form {
+  display: grid;
+  gap: 1rem;
+}
+.rec-bloque {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem 1.25rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  margin: 0;
+}
+.rec-bloque legend {
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0 0.4rem;
+}
+.rec label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.rec input,
+.rec textarea {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  width: 100%;
+  box-sizing: border-box;
+}
+.rec input:focus,
+.rec textarea:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-color: var(--primary-color);
+}
+
+.rec-buscar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.rec-buscar label {
+  flex: 1 1 200px;
+}
+.rec-paciente {
+  margin: 0.75rem 0 0;
+  font-weight: 600;
+  color: var(--success-color);
+}
+.rec-aviso {
+  margin: 0.75rem 0 0;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+}
+
+.rec-med {
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+.rec-med-cab {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  color: var(--text-primary);
+}
+.rec-med-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.6rem;
+}
+.rec-quitar {
+  font: inherit;
+  background: none;
+  border: none;
+  color: var(--danger-color);
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+.rec-quitar:hover {
+  text-decoration: underline;
+}
+
+.rec-acciones {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.rec-acciones .rec-boton {
+  flex: 1 1 200px;
+  padding: 0.85rem 1rem;
+}
+.rec-ok,
+.rec-error {
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  margin: 0;
+}
+.rec-ok {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+.rec-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.rec-historial {
+  margin-top: 1.5rem;
+}
+.rec-historial h2 {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.rec-historial ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.rec-historial li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  color: var(--text-primary);
+}
+.rec-estado {
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+}
+.rec-estado--emitida {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+.rec-estado--borrador {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+}
+=== AdminTurnos.jsx ===
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
+import '../styles/admin.css';
+
+const FILTROS = [
+  { id: 'todos', label: 'Todos' },
+  { id: 'solicitado', label: 'Pendientes' },
+  { id: 'otorgado', label: 'Otorgados' },
+  { id: 'confirmado', label: 'Confirmados' },
+  { id: 'rechazado', label: 'Rechazados' },
+];
+
+const RESUMEN = [
+  { id: 'solicitado', label: 'Pendientes', ayuda: 'esperan que los otorgues' },
+  { id: 'otorgado', label: 'Otorgados', ayuda: 'esperan respuesta del paciente' },
+  { id: 'confirmado', label: 'Confirmados', ayuda: 'el paciente aceptó' },
+  { id: 'rechazado', label: 'Rechazados', ayuda: 'el paciente rechazó' },
+];
 
 const ETIQUETA = {
-  solicitado: 'Esperando que te den fecha',
-  otorgado: 'TenÃ©s que responder',
+  solicitado: 'Pendiente',
+  otorgado: 'Otorgado',
   confirmado: 'Confirmado',
   rechazado: 'Rechazado',
   reprogramado: 'Reprogramado',
   cancelado: 'Cancelado',
 };
-const ORDEN = { otorgado: 0, confirmado: 1, solicitado: 2, reprogramado: 3, rechazado: 4, cancelado: 5 };
 
-function fechaLarga(iso) {
+const quitarTildes = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const dos = (n) => String(n).padStart(2, '0');
+
+function formatearFecha(iso) {
+  if (!iso) return 'Sin fecha';
   const f = new Date(iso);
-  if (Number.isNaN(f.getTime())) return 'Fecha a confirmar';
-  const dia = f.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
-  const hora = f.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} Â· ${hora} hs`;
+  if (Number.isNaN(f.getTime())) return 'Sin fecha';
+  const dia = f.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+  return `${dia} · ${dos(f.getHours())}:${dos(f.getMinutes())} hs`;
 }
 
-export default function MisTurnos() {
+function iniciales(nombre) {
+  return (nombre || '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('');
+}
+
+function PanelOtorgar({ turno, medicos, onListo, onCancelar }) {
+  const pedido = new Date(turno.fecha_hora);
+  const valido = !Number.isNaN(pedido.getTime());
+  const sugerido = medicos.find((m) => quitarTildes(m.especialidad) === quitarTildes(turno.especialidad));
+
+  const [medicoId, setMedicoId] = useState(sugerido?.id || '');
+  const [fecha, setFecha] = useState(valido ? `${pedido.getFullYear()}-${dos(pedido.getMonth() + 1)}-${dos(pedido.getDate())}` : '');
+  const [hora, setHora] = useState(valido ? `${dos(pedido.getHours())}:${dos(pedido.getMinutes())}` : '');
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  const enviar = async (e) => {
+    e.preventDefault();
+    setEnviando(true);
+    setError('');
+    try {
+      await api.patch(`/turnos/${turno.id}/otorgar`, { medico_id: medicoId, fecha_hora: `${fecha}T${hora}:00` });
+      onListo();
+    } catch (err) {
+      setError(err.message);
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <form className="adm-otorgar" onSubmit={enviar}>
+      <p className="adm-otorgar-titulo">Confirmá médico, día y hora</p>
+      <div className="adm-otorgar-campos">
+        <label>
+          Médico
+          <select value={medicoId} onChange={(e) => setMedicoId(e.target.value)} required>
+            <option value="">Elegí un médico…</option>
+            {medicos.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nombre}{m.especialidad ? ` · ${m.especialidad}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Día
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
+        </label>
+        <label>
+          Hora
+          <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} required />
+        </label>
+      </div>
+      {medicos.length === 0 && <p className="adm-aviso">No hay médicos cargados todavía.</p>}
+      {error && <p className="adm-error" role="alert">{error}</p>}
+      <div className="adm-otorgar-botones">
+        <button type="submit" className="adm-boton adm-boton--primario" disabled={enviando}>
+          {enviando ? 'Otorgando…' : 'Otorgar turno'}
+        </button>
+        <button type="button" className="adm-boton" onClick={onCancelar}>Cancelar</button>
+      </div>
+    </form>
+  );
+}
+
+export default function AdminTurnos() {
   const { user, logout } = useAuth();
   const [turnos, setTurnos] = useState([]);
+  const [medicos, setMedicos] = useState([]);
+  const [filtro, setFiltro] = useState('solicitado');
+  const [abierto, setAbierto] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  const [mensaje, setMensaje] = useState('');
-  const [rechazando, setRechazando] = useState(null); // id del turno que pide confirmaciÃ³n
-  const [enviando, setEnviando] = useState(null);
+  const [exito, setExito] = useState('');
 
-  // Recarga manual (despuÃ©s de responder un turno): muestra el cargando y limpia el error.
+  // Recarga manual (botón "Actualizar" y después de otorgar): muestra el cargando y limpia el error.
   const cargar = useCallback(async () => {
     setCargando(true);
     setError('');
     try {
-      setTurnos(await api.get('/turnos/mios'));
+      const [ts, us] = await Promise.all([api.get('/turnos'), api.get('/medicos').catch(() => [])]);
+      setTurnos(ts);
+      setMedicos(us); // GET /api/medicos ya devuelve solo médicos: id, nombre y especialidad
     } catch (e) {
       setError(e.message);
     } finally {
@@ -45,13 +646,15 @@ export default function MisTurnos() {
     }
   }, []);
 
-  // Carga inicial: el estado arranca en cargando=true y error='', asÃ­ que no hace falta setearlos acÃ¡.
+  // Carga inicial: el estado arranca en cargando=true y error='', así que no hace falta setearlos acá.
   useEffect(() => {
     let activo = true;
     const cargarInicial = async () => {
       try {
-        const datos = await api.get('/turnos/mios');
-        if (activo) setTurnos(datos);
+        const [ts, us] = await Promise.all([api.get('/turnos'), api.get('/medicos').catch(() => [])]);
+        if (!activo) return;
+        setTurnos(ts);
+        setMedicos(us);
       } catch (e) {
         if (activo) setError(e.message);
       } finally {
@@ -62,87 +665,113 @@ export default function MisTurnos() {
     return () => { activo = false; };
   }, []);
 
-  const responder = async (turno, accion) => {
-    setEnviando(turno.id);
-    setError('');
-    setMensaje('');
-    try {
-      await api.patch(`/turnos/${turno.id}/${accion === 'aceptar' ? 'confirmar' : 'rechazar'}`);
-      setMensaje(accion === 'aceptar' ? 'Â¡Listo! Confirmaste tu turno.' : 'Rechazaste el turno.');
-      setRechazando(null);
-      await cargar();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setEnviando(null);
-    }
+  const cuenta = useMemo(() => {
+    const c = {};
+    turnos.forEach((t) => { c[t.estado] = (c[t.estado] || 0) + 1; });
+    return c;
+  }, [turnos]);
+
+  const visibles = turnos.filter((t) => filtro === 'todos' || t.estado === filtro);
+  const nombreMedico = (id) => medicos.find((m) => m.id === id)?.nombre;
+
+  const alOtorgar = () => {
+    setAbierto(null);
+    setExito('Turno otorgado. El paciente ya puede verlo.');
+    cargar();
   };
 
-  const ordenados = [...turnos].sort((a, b) => (ORDEN[a.estado] ?? 9) - (ORDEN[b.estado] ?? 9));
-  const porResponder = turnos.filter((t) => t.estado === 'otorgado').length;
-
   return (
-    <div className="pac">
-      <header className="pac-barra">
-        <Link to="/paciente" className="pac-marca"><span className="pac-logo" aria-hidden="true" /><strong>PAMI</strong></Link>
-        <div className="pac-usuario">
+    <div className="adm">
+      <header className="adm-barra">
+        <div className="adm-marca">
+          <span className="adm-logo" aria-hidden="true" />
+          <div>
+            <strong>PAMI</strong>
+            <span>Panel administrativo</span>
+          </div>
+        </div>
+        <div className="adm-usuario">
           <span>{user?.nombre || user?.email}</span>
-          <button type="button" className="pac-boton pac-boton--claro" onClick={logout}>Salir</button>
+          <button type="button" className="adm-boton" onClick={logout}>Salir</button>
         </div>
       </header>
 
-      <main className="pac-contenido">
-        <Link to="/paciente" className="pac-volver">â† Inicio</Link>
-        <h1>Mis turnos</h1>
-        {porResponder > 0 && (
-          <p className="pac-aviso" role="status">
-            TenÃ©s {porResponder} {porResponder === 1 ? 'turno' : 'turnos'} para aceptar o rechazar.
-          </p>
-        )}
-        {mensaje && <p className="pac-ok" role="status">{mensaje}</p>}
-        {error && <p className="pac-error" role="alert">{error}</p>}
-        {cargando && <p>Cargando tus turnosâ€¦</p>}
+      <main className="adm-contenido">
+        <h1>Solicitudes de turnos</h1>
+        <p className="adm-sub">Revisá los pedidos de los pacientes y otorgá fecha, hora y médico.</p>
 
-        {!cargando && !error && turnos.length === 0 && (
-          <div className="pac-vacio">
-            <p>TodavÃ­a no pediste ningÃºn turno.</p>
-            <Link to="/paciente/turnos/nuevo" className="pac-boton pac-boton--primario">Pedir un turno</Link>
+        <section className="adm-resumen" aria-label="Resumen por estado">
+          {RESUMEN.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className={`adm-tarjeta adm-tarjeta--${r.id}${filtro === r.id ? ' adm-tarjeta--activa' : ''}`}
+              onClick={() => setFiltro(r.id)}
+            >
+              <span className="adm-numero">{cuenta[r.id] || 0}</span>
+              <span className="adm-tarjeta-label">{r.label}</span>
+              <span className="adm-tarjeta-ayuda">{r.ayuda}</span>
+            </button>
+          ))}
+        </section>
+
+        <div className="adm-filtros" role="tablist" aria-label="Filtrar por estado">
+          {FILTROS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              role="tab"
+              aria-selected={filtro === f.id}
+              className={`adm-filtro${filtro === f.id ? ' adm-filtro--activo' : ''}`}
+              onClick={() => setFiltro(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+          <button type="button" className="adm-boton adm-actualizar" onClick={cargar} disabled={cargando}>
+            ↻ Actualizar
+          </button>
+        </div>
+
+        {exito && <p className="adm-exito" role="status">{exito}</p>}
+        {error && <p className="adm-error" role="alert">{error}</p>}
+        {cargando && <p className="adm-aviso">Cargando solicitudes…</p>}
+        {!cargando && !error && visibles.length === 0 && (
+          <div className="adm-vacio">
+            <span aria-hidden="true">📭</span>
+            <p>No hay turnos en esta categoría.</p>
           </div>
         )}
 
-        <ul className="pac-lista">
-          {ordenados.map((t) => (
-            <li key={t.id} className={`pac-turno pac-turno--${t.estado}`}>
-              <div className="pac-turno-fila">
-                <h2>{t.especialidad}</h2>
-                <span className={`pac-badge pac-badge--${t.estado}`}>{ETIQUETA[t.estado] || t.estado}</span>
+        <ul className="adm-lista">
+          {visibles.map((t) => (
+            <li key={t.id} className="adm-turno">
+              <div className="adm-turno-cabecera">
+                <span className="adm-avatar" aria-hidden="true">{iniciales(t.paciente?.nombre)}</span>
+                <div className="adm-turno-paciente">
+                  <strong>{t.paciente?.nombre || 'Paciente'}</strong>
+                  <span>
+                    {t.paciente?.dni ? `DNI ${t.paciente.dni}` : 'Sin DNI'}
+                    {t.paciente?.telefono ? ` · Tel. ${t.paciente.telefono}` : ''}
+                  </span>
+                </div>
+                <span className={`adm-badge adm-badge--${t.estado}`}>{ETIQUETA[t.estado] || t.estado}</span>
               </div>
-              <p className="pac-fecha">
-                {t.estado === 'solicitado' ? 'Fecha que pediste: ' : ''}
-                {fechaLarga(t.fecha_hora)}
-              </p>
-              <p className="pac-motivo">Motivo: {t.motivo}</p>
 
-              {t.estado === 'otorgado' && rechazando !== t.id && (
-                <div className="pac-acciones">
-                  <button type="button" className="pac-boton pac-boton--aceptar" disabled={enviando === t.id} onClick={() => responder(t, 'aceptar')}>
-                    âœ” Aceptar turno
-                  </button>
-                  <button type="button" className="pac-boton pac-boton--rechazar" disabled={enviando === t.id} onClick={() => setRechazando(t.id)}>
-                    âœ– Rechazar
-                  </button>
-                </div>
+              <dl className="adm-datos">
+                <div><dt>Especialidad</dt><dd>{t.especialidad}</dd></div>
+                <div><dt>{t.estado === 'solicitado' ? 'Fecha pedida' : 'Fecha del turno'}</dt><dd>{formatearFecha(t.fecha_hora)}</dd></div>
+                <div><dt>Médico</dt><dd>{nombreMedico(t.medico_id) || (t.medico_id ? 'Asignado' : 'Sin asignar')}</dd></div>
+                <div className="adm-dato-ancho"><dt>Motivo</dt><dd>{t.motivo}</dd></div>
+              </dl>
+
+              {t.estado === 'solicitado' && abierto !== t.id && (
+                <button type="button" className="adm-boton adm-boton--primario" onClick={() => { setAbierto(t.id); setExito(''); }}>
+                  Otorgar turno
+                </button>
               )}
-              {rechazando === t.id && (
-                <div className="pac-confirmar" role="alertdialog" aria-label="Confirmar rechazo">
-                  <p>Â¿Seguro que querÃ©s rechazar este turno?</p>
-                  <div className="pac-acciones">
-                    <button type="button" className="pac-boton pac-boton--rechazar" disabled={enviando === t.id} onClick={() => responder(t, 'rechazar')}>
-                      SÃ­, rechazar
-                    </button>
-                    <button type="button" className="pac-boton" onClick={() => setRechazando(null)}>No, volver</button>
-                  </div>
-                </div>
+              {abierto === t.id && (
+                <PanelOtorgar turno={t} medicos={medicos} onListo={alOtorgar} onCancelar={() => setAbierto(null)} />
               )}
             </li>
           ))}
@@ -151,409 +780,425 @@ export default function MisTurnos() {
     </div>
   );
 }
-=== SolicitarTurno.jsx ===
-import { useCallback, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../services/api';
-import { reconocimientoSoportado, sintesisSoportada } from '../services/voz';
-import { ESTADO, useSolicitudVoz } from '../hooks/useSolicitudVoz';
-import { ESPECIALIDADES } from '../utils/parseTurno';
-import '../styles/solicitud.css';
-
-// El backend guarda `origen: "manual" | "voz"` en cada solicitud (tarea J4 del Sprint 1).
-// Si se conecta este front a una versiÃ³n vieja del backend que lo rechaza, poner en false.
-const ENVIAR_ORIGEN = true;
-
-const ETIQUETA = {
-  [ESTADO.QUIETO]: 'PodÃ©s pedir el turno hablando',
-  [ESTADO.HABLANDO]: 'Hablandoâ€¦',
-  [ESTADO.ESCUCHANDO]: 'Te escucho, hablÃ¡ ahora',
-  [ESTADO.ENVIANDO]: 'Enviando tu pedidoâ€¦',
-};
-
-const VACIO = { especialidad: '', fecha: '', hora: '', motivo: '' };
-const hoyIso = () => {
-  const h = new Date();
-  return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
-};
-
-export default function SolicitarTurno() {
-  const [datos, setDatos] = useState(VACIO);
-  const [error, setError] = useState('');
-  const [creado, setCreado] = useState(null);
-  const [enviando, setEnviando] = useState(false);
-  const datosRef = useRef(datos);
-  const usoVoz = useRef(false);
-
-  const setCampo = useCallback((campo, valor) => {
-    setDatos((prev) => {
-      const nuevo = { ...prev, [campo]: valor };
-      datosRef.current = nuevo;
-      return nuevo;
-    });
-  }, []);
-
-  // Se usa tanto desde el botÃ³n como desde la voz (lee siempre los datos mÃ¡s recientes)
-  const enviar = useCallback(async () => {
-    const d = datosRef.current;
-    const cuerpo = {
-      especialidad: d.especialidad,
-      fecha_hora: `${d.fecha}T${d.hora}:00`, // hora local, igual que el resto de la app
-      motivo: d.motivo,
-    };
-    if (ENVIAR_ORIGEN) cuerpo.origen = usoVoz.current ? 'voz' : 'manual';
-    setEnviando(true);
-    setError('');
-    try {
-      setCreado(await api.post('/turnos', cuerpo));
-    } catch (e) {
-      setError(e.message);
-      throw e;
-    } finally {
-      setEnviando(false);
-    }
-  }, []);
-
-  const voz = useSolicitudVoz({ datos, setCampo, enviar });
-
-  const alEnviarManual = async (e) => {
-    e.preventDefault();
-    voz.detener();
-    try {
-      await enviar();
-    } catch {
-      /* el error ya quedÃ³ en pantalla */
-    }
-  };
-
-  const empezarVoz = () => {
-    usoVoz.current = true;
-    voz.iniciar();
-  };
-
-  if (creado) {
-    return (
-      <main className="sol-pagina">
-        <h1>Â¡Pedido enviado!</h1>
-        <p className="sol-ok" role="status">
-          Pediste un turno de <strong>{creado.especialidad}</strong>. Te vamos a avisar cuando te lo otorguen.
-        </p>
-        <div className="sol-acciones">
-          <button type="button" className="sol-principal" onClick={() => { setCreado(null); setDatos(VACIO); datosRef.current = VACIO; usoVoz.current = false; }}>
-            Pedir otro turno
-          </button>
-          <Link to="/paciente" className="sol-link">Volver al inicio</Link>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="sol-pagina">
-      <Link to="/paciente" className="sol-link">â† Inicio</Link>
-      <h1>Pedir un turno</h1>
-
-      <section className="sol-voz" aria-labelledby="sol-voz-titulo">
-        <h2 id="sol-voz-titulo">Pedirlo con la voz</h2>
-        {!sintesisSoportada || !reconocimientoSoportado ? (
-          <p className="sol-alerta" role="status">
-            Este navegador no permite pedir el turno hablando. CompletÃ¡ el formulario de abajo
-            (la voz funciona en Chrome o Edge).
-          </p>
-        ) : (
-          <>
-            <div className={`sol-estado sol-estado--${voz.estado}`} role="status" aria-live="polite">
-              <span className="sol-punto" aria-hidden="true" />
-              {ETIQUETA[voz.estado]}
-            </div>
-            {voz.activo && voz.mensaje && <p className="sol-subtitulo">â€œ{voz.mensaje}â€</p>}
-            {voz.activo && voz.oido && <p>EntendÃ­: <strong>{voz.oido}</strong></p>}
-            {voz.aviso && <p className="sol-alerta" role="alert">{voz.aviso}</p>}
-            {!voz.activo ? (
-              <button type="button" className="sol-principal" onClick={empezarVoz}>ðŸŽ¤ Pedir turno hablando</button>
-            ) : (
-              <button type="button" className="sol-peligro" onClick={voz.detener}>â¹ Parar</button>
-            )}
-            <p className="sol-ayuda">Te voy a preguntar: especialidad, dÃ­a, hora y motivo. PodÃ©s decir â€œpararâ€ cuando quieras.</p>
-          </>
-        )}
-      </section>
-
-      <form className="sol-form" onSubmit={alEnviarManual}>
-        <h2>Datos del turno</h2>
-        <label>
-          Especialidad
-          <select value={datos.especialidad} onChange={(e) => setCampo('especialidad', e.target.value)} required>
-            <option value="">ElegÃ­ unaâ€¦</option>
-            {ESPECIALIDADES.map((esp) => <option key={esp} value={esp}>{esp}</option>)}
-          </select>
-        </label>
-        <label>
-          DÃ­a
-          <input type="date" min={hoyIso()} value={datos.fecha} onChange={(e) => setCampo('fecha', e.target.value)} required />
-        </label>
-        <label>
-          Hora
-          <input type="time" value={datos.hora} onChange={(e) => setCampo('hora', e.target.value)} required />
-        </label>
-        <label>
-          Motivo de la consulta
-          <textarea rows={3} minLength={3} maxLength={300} value={datos.motivo} onChange={(e) => setCampo('motivo', e.target.value)} required />
-        </label>
-
-        {error && <p className="sol-alerta" role="alert">{error}</p>}
-        <button type="submit" className="sol-principal" disabled={enviando}>
-          {enviando ? 'Enviandoâ€¦' : 'Solicitar turno'}
-        </button>
-      </form>
-    </main>
-  );
-}
-=== solicitud.css ===
-/* Solicitud de turno - DiseÃ±o frÃ­o y profesional */
-.sol-pagina {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 2rem 1rem 3rem;
-  font-size: 1rem;
-  line-height: 1.6;
-  background: linear-gradient(180deg, var(--bg-color) 0, var(--bg-secondary) 100%);
+=== admin.css ===
+.adm {
+  --azul: #3b82f6;
+  --azul-oscuro: #2563eb;
+  --azul-claro: #1e293b;
+  --amarillo: #f59e0b;
+  --verde: #10b981;
+  --rojo: #ef4444;
+  --morado: #a855f7;
+  --borde: #334155;
+  --sombra: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
   min-height: 100vh;
+  background: linear-gradient(180deg, var(--bg-color) 0, var(--bg-secondary) 260px);
   color: var(--text-primary);
 }
 
-.sol-pagina h1 {
+/* Barra superior */
+.adm-barra {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1.5rem;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+}
+.adm-marca {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.adm-marca div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.adm-marca strong {
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+.adm-marca span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.adm-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+  position: relative;
+}
+.adm-usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+}
+.adm-usuario .adm-boton {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+.adm-usuario .adm-boton:hover:not(:disabled) {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.adm-contenido {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+.adm-contenido h1 {
+  margin: 0;
   font-size: 1.8rem;
-  margin: 0.75rem 0 1rem;
   color: var(--text-primary);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
-
-.sol-pagina h2 {
-  font-size: 1.3rem;
-  margin: 0 0 0.75rem;
-  color: var(--text-primary);
-  font-weight: 600;
+.adm-sub {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--text-secondary);
 }
 
-.sol-pagina button,
-.sol-link {
-  min-height: 48px;
-  padding: 0.7rem 1.25rem;
-  font-size: 1rem;
+/* Botones */
+.adm-boton {
+  font: inherit;
   font-weight: 600;
+  padding: 0.55rem 1rem;
   border-radius: 8px;
-  border: 1px solid transparent;
-  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
   transition: all 0.15s ease;
 }
-
-.sol-pagina button:focus-visible,
-.sol-link:focus-visible,
-.sol-form select:focus-visible,
-.sol-form input:focus-visible,
-.sol-form textarea:focus-visible {
+.adm-boton:hover:not(:disabled) {
+  background: var(--border-color);
+  border-color: var(--border-color-light);
+}
+.adm-boton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.adm-boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.adm-boton--primario {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+.adm-boton--primario:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.adm button:focus-visible,
+.adm select:focus-visible,
+.adm input:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
 
-.sol-pagina button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Resumen */
+.adm-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 }
-
-.sol-link {
-  display: inline-flex;
-  align-items: center;
-  color: var(--primary-color);
-  text-decoration: none;
-  padding-left: 0;
-  gap: 0.4rem;
-}
-
-.sol-link:hover {
-  color: var(--primary-hover);
-  text-decoration: underline;
-}
-
-.sol-voz {
+.adm-tarjeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  text-align: left;
+  font: inherit;
+  padding: 0.9rem 1rem;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
+  border-left: 3px solid var(--c, var(--primary-color));
   border-radius: 8px;
-  padding: 1rem 1.25rem 1.25rem;
-  margin-bottom: 1.5rem;
   box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.adm-tarjeta:hover {
+  border-color: var(--border-color-light);
+  background: #1e293b;
+}
+.adm-tarjeta--solicitado {
+  --c: var(--warning-color);
+}
+.adm-tarjeta--otorgado {
+  --c: var(--primary-color);
+}
+.adm-tarjeta--confirmado {
+  --c: var(--success-color);
+}
+.adm-tarjeta--rechazado {
+  --c: var(--danger-color);
+}
+.adm-tarjeta--activa {
+  border-color: var(--c);
+  background: #1e293b;
+}
+.adm-numero {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--c);
+}
+.adm-tarjeta-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.adm-tarjeta-ayuda {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
-.sol-estado {
+/* Filtros */
+.adm-filtros {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.adm-filtro {
+  font: inherit;
+  font-weight: 500;
+  padding: 0.45rem 0.9rem;
   border-radius: 6px;
-  background: rgba(148, 163, 184, 0.1);
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
   color: var(--text-secondary);
-  margin-bottom: 0.75rem;
+  transition: all 0.15s ease;
+}
+.adm-filtro:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+.adm-filtro--activo {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+.adm-actualizar {
+  margin-left: auto;
+}
+
+/* Mensajes */
+.adm-exito,
+.adm-error,
+.adm-aviso {
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  margin: 0 0 1rem;
+}
+.adm-exito {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+.adm-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+.adm-aviso {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+.adm-vacio {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  color: var(--text-secondary);
+}
+.adm-vacio span {
+  font-size: 2.5rem;
+}
+
+/* Lista de turnos */
+.adm-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.adm-turno {
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
 }
-
-.sol-punto {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-muted);
+.adm-turno-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+.adm-avatar {
   flex: none;
-}
-
-.sol-estado--hablando {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
   background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.4);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: var(--primary-color);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.adm-turno-paciente {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.adm-turno-paciente strong {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+.adm-turno-paciente span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
 }
 
-.sol-estado--hablando .sol-punto {
-  background: var(--primary-color);
-  animation: sol-pulso 1s infinite;
+.adm-badge {
+  flex: none;
+  padding: 0.25rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
 }
-
-.sol-estado--escuchando {
-  background: rgba(16, 185, 129, 0.1);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.4);
-}
-
-.sol-estado--escuchando .sol-punto {
-  background: var(--success-color);
-  animation: sol-pulso 0.7s infinite;
-}
-
-.sol-estado--enviando {
+.adm-badge--solicitado {
   background: rgba(245, 158, 11, 0.1);
   color: #fbbf24;
   border-color: rgba(245, 158, 11, 0.4);
 }
-
-.sol-estado--enviando .sol-punto {
-  background: var(--warning-color);
+.adm-badge--otorgado {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+.adm-badge--confirmado {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+.adm-badge--rechazado,
+.adm-badge--cancelado {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+.adm-badge--reprogramado {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a78bfa;
+  border-color: rgba(168, 85, 247, 0.4);
 }
 
-@keyframes sol-pulso {
-  50% {
-    transform: scale(1.3);
-    opacity: 0.6;
-  }
+.adm-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1rem;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .sol-punto {
-    animation: none !important;
-  }
+.adm-datos dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
 }
-
-.sol-subtitulo {
-  font-style: italic;
-  margin: 0.5rem 0;
+.adm-datos dd {
+  margin: 0.1rem 0 0;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.adm-dato-ancho {
+  grid-column: 1 / -1;
+}
+.adm-dato-ancho dd {
+  font-weight: 400;
   color: var(--text-secondary);
 }
 
-.sol-ayuda {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin-bottom: 0;
+/* Panel para otorgar */
+.adm-otorgar {
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
   margin-top: 0.75rem;
 }
-
-.sol-form {
-  display: grid;
-  gap: 1rem;
-  background: var(--card-bg);
-  padding: 1.25rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
+.adm-otorgar-titulo {
+  margin: 0 0 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
-
-.sol-form h2 {
-  margin-top: 0;
-}
-
-.sol-form label {
+.adm-otorgar-campos {
   display: grid;
-  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+.adm-otorgar label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-secondary);
-  font-size: 0.9rem;
 }
-
-.sol-form select,
-.sol-form input,
-.sol-form textarea {
-  font-size: 1rem;
-  padding: 0.65rem;
-  border: 1px solid var(--border-color);
+.adm-otorgar select,
+.adm-otorgar input {
+  font: inherit;
+  padding: 0.55rem;
   border-radius: 6px;
-  font-family: inherit;
-  font-weight: 400;
+  border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
-
-.sol-form select:focus,
-.sol-form input:focus,
-.sol-form textarea:focus {
+.adm-otorgar select:focus,
+.adm-otorgar input:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
   border-color: var(--primary-color);
 }
-
-.sol-principal {
-  background: var(--primary-color);
-  color: #fff;
-  width: 100%;
-  min-height: 48px !important;
-  font-size: 1rem !important;
-  border-color: var(--primary-color);
-}
-
-.sol-principal:hover:not(:disabled) {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-}
-
-.sol-peligro {
-  background: var(--danger-color);
-  color: #fff;
-  width: 100%;
-  border-color: var(--danger-color);
-}
-
-.sol-peligro:hover:not(:disabled) {
-  background: #dc2626;
-  border-color: #dc2626;
-}
-
-.sol-alerta {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #fbbf24;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin: 0.5rem 0;
-}
-
-.sol-ok {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  color: #34d399;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.sol-acciones {
-  display: grid;
+.adm-otorgar-botones {
+  display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 0.9rem;
+  flex-wrap: wrap;
+}
+.adm-otorgar .adm-aviso,
+.adm-otorgar .adm-error {
+  margin: 0.75rem 0 0;
+}
+
+@media (max-width: 520px) {
+  .adm-barra {
+    padding: 0.75rem 1rem;
+  }
+  .adm-actualizar {
+    margin-left: 0;
+  }
+  .adm-turno-cabecera {
+    flex-wrap: wrap;
+  }
 }
