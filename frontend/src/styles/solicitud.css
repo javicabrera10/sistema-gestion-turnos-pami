@@ -1,40 +1,247 @@
-/* Pensado para adultos mayores: texto grande, alto contraste, botones amplios */
-.sol-pagina { max-width: 640px; margin: 0 auto; padding: 1rem 1rem 3rem; font-size: 1.2rem; line-height: 1.5; }
-.sol-pagina h1 { font-size: 2rem; margin: 0.5rem 0 1rem; }
-.sol-pagina h2 { font-size: 1.4rem; margin: 0 0 0.75rem; }
-
-.sol-pagina button, .sol-link {
-  min-height: 56px; padding: 0.75rem 1.25rem; font-size: 1.15rem; font-weight: 600;
-  border-radius: 12px; border: 2px solid transparent;
-}
-.sol-pagina button:focus-visible, .sol-link:focus-visible,
-.sol-form select:focus-visible, .sol-form input:focus-visible, .sol-form textarea:focus-visible {
-  outline: 4px solid #ffb300; outline-offset: 2px;
-}
-.sol-pagina button:disabled { opacity: 0.5; cursor: not-allowed; }
-.sol-link { display: inline-flex; align-items: center; color: var(--primary-color); text-decoration: underline; padding-left: 0; }
-
-.sol-voz { background: #fff; border: 2px solid var(--primary-color); border-radius: 16px; padding: 1rem 1.25rem 1.25rem; margin-bottom: 1.5rem; }
-.sol-estado { display: flex; align-items: center; gap: 0.75rem; font-size: 1.3rem; font-weight: 700; padding: 0.75rem 1rem; border-radius: 12px; background: #eef3fa; margin-bottom: 0.75rem; }
-.sol-punto { width: 18px; height: 18px; border-radius: 50%; background: #8a99ad; flex: none; }
-.sol-estado--hablando .sol-punto { background: var(--primary-color); animation: sol-pulso 1s infinite; }
-.sol-estado--escuchando { background: #e6f6ea; }
-.sol-estado--escuchando .sol-punto { background: #1b8a3a; animation: sol-pulso 0.7s infinite; }
-.sol-estado--enviando .sol-punto { background: #b36b00; }
-@keyframes sol-pulso { 50% { transform: scale(1.5); opacity: 0.6; } }
-@media (prefers-reduced-motion: reduce) { .sol-punto { animation: none !important; } }
-
-.sol-subtitulo { font-style: italic; margin: 0.5rem 0; }
-.sol-ayuda { font-size: 1rem; color: #555; margin-bottom: 0; }
-
-.sol-form { display: grid; gap: 1rem; }
-.sol-form label { display: grid; gap: 0.4rem; font-weight: 600; }
-.sol-form select, .sol-form input, .sol-form textarea {
-  font-size: 1.2rem; padding: 0.7rem; border: 2px solid #8a99ad; border-radius: 10px; font-family: inherit; font-weight: 400;
+/* Solicitud de turno - Diseño frío y profesional */
+.sol-pagina {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  background: linear-gradient(180deg, var(--bg-color) 0, var(--bg-secondary) 100%);
+  min-height: 100vh;
+  color: var(--text-primary);
 }
 
-.sol-principal { background: var(--primary-color); color: #fff; width: 100%; min-height: 64px !important; font-size: 1.25rem !important; }
-.sol-peligro { background: #b00020; color: #fff; width: 100%; }
-.sol-alerta { background: #fff4d6; border: 2px solid #b36b00; border-radius: 12px; padding: 0.75rem 1rem; margin: 0.5rem 0; }
-.sol-ok { background: #e6f6ea; border: 2px solid #1b6e34; border-radius: 12px; padding: 1rem; }
-.sol-acciones { display: grid; gap: 0.75rem; margin-top: 1rem; }
+.sol-pagina h1 {
+  font-size: 1.8rem;
+  margin: 0.75rem 0 1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.sol-pagina h2 {
+  font-size: 1.3rem;
+  margin: 0 0 0.75rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.sol-pagina button,
+.sol-link {
+  min-height: 48px;
+  padding: 0.7rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.sol-pagina button:focus-visible,
+.sol-link:focus-visible,
+.sol-form select:focus-visible,
+.sol-form input:focus-visible,
+.sol-form textarea:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.sol-pagina button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sol-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding-left: 0;
+  gap: 0.4rem;
+}
+
+.sol-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.sol-voz {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem 1.25rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.sol-estado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border-color);
+}
+
+.sol-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+
+.sol-estado--hablando {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.sol-estado--hablando .sol-punto {
+  background: var(--primary-color);
+  animation: sol-pulso 1s infinite;
+}
+
+.sol-estado--escuchando {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.sol-estado--escuchando .sol-punto {
+  background: var(--success-color);
+  animation: sol-pulso 0.7s infinite;
+}
+
+.sol-estado--enviando {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.sol-estado--enviando .sol-punto {
+  background: var(--warning-color);
+}
+
+@keyframes sol-pulso {
+  50% {
+    transform: scale(1.3);
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sol-punto {
+    animation: none !important;
+  }
+}
+
+.sol-subtitulo {
+  font-style: italic;
+  margin: 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+.sol-ayuda {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 0;
+  margin-top: 0.75rem;
+}
+
+.sol-form {
+  display: grid;
+  gap: 1rem;
+  background: var(--card-bg);
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.sol-form h2 {
+  margin-top: 0;
+}
+
+.sol-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.sol-form select,
+.sol-form input,
+.sol-form textarea {
+  font-size: 1rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-family: inherit;
+  font-weight: 400;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.sol-form select:focus,
+.sol-form input:focus,
+.sol-form textarea:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-color: var(--primary-color);
+}
+
+.sol-principal {
+  background: var(--primary-color);
+  color: #fff;
+  width: 100%;
+  min-height: 48px !important;
+  font-size: 1rem !important;
+  border-color: var(--primary-color);
+}
+
+.sol-principal:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.sol-peligro {
+  background: var(--danger-color);
+  color: #fff;
+  width: 100%;
+  border-color: var(--danger-color);
+}
+
+.sol-peligro:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.sol-alerta {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.sol-ok {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.sol-acciones {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
