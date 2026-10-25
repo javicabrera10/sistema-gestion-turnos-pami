@@ -75,6 +75,7 @@
 }
 .adm-filtro--activo { background: var(--azul); border-color: var(--azul); color: #fff; }
 .adm-actualizar { margin-left: auto; }
+.adm-actualizar + .adm-actualizar { margin-left: 0; } /* los dos botones quedan juntos a la derecha */
 
 /* Mensajes */
 .adm-exito, .adm-error, .adm-aviso { border-radius: 10px; padding: 0.7rem 1rem; margin: 0 0 1rem; }
