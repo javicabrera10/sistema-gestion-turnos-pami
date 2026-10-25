@@ -1,6 +1,8 @@
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
+from app.models.usuario import PREFERENCIAS_POR_DEFECTO
+
 from .base import BaseRepository
 
 
@@ -45,3 +47,13 @@ class UsuarioRepository(BaseRepository):
     def buscar_paciente_por_dni(self, dni: str):
         """Solo id, nombre y DNI: lo mínimo para identificar al paciente."""
         return self.col.find_one({"rol": "paciente", "dni": dni}, {"nombre": 1, "dni": 1})
+
+    def obtener_preferencias(self, id_):
+        """Preferencias de accesibilidad (con valores por defecto si todavia no las guardo). None si no existe."""
+        doc = self.col.find_one({"_id": ObjectId(id_)}, {"preferencias": 1})
+        if doc is None:
+            return None
+        return {**PREFERENCIAS_POR_DEFECTO, **doc.get("preferencias", {})}
+
+    def guardar_preferencias(self, id_, preferencias: dict):
+        self.update(id_, {"preferencias": preferencias})
