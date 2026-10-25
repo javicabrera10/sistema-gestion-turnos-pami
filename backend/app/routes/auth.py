@@ -15,6 +15,7 @@ def _service() -> AuthService:
 
 
 @auth_bp.post("/registro")
+@limiter.limit("10 per minute")
 def registro():
     """Registro de un paciente
     ---
@@ -38,6 +39,8 @@ def registro():
         description: Datos inválidos
       409:
         description: El email ya está registrado
+      429:
+        description: Demasiados intentos
     """
     datos = RegistroPacienteSchema.model_validate(request.get_json(silent=True) or {})
     try:

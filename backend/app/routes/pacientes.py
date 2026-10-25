@@ -3,6 +3,7 @@ import re
 from flask import Blueprint, current_app, jsonify, request
 
 from app.repositories.usuario_repository import UsuarioRepository
+from app.security.auditoria import registrar_acceso
 from app.security.roles import roles_required
 
 pacientes_bp = Blueprint("pacientes", __name__)
@@ -34,6 +35,7 @@ def buscar_paciente():
     if not re.fullmatch(r"\d{7,8}", dni):
         return jsonify(error="El DNI debe tener 7 u 8 números"), 400
     paciente = UsuarioRepository(current_app.db).buscar_paciente_por_dni(dni)
+    registrar_acceso("paciente_por_dni", 0 if paciente is None else 1)
     if paciente is None:
         return jsonify([])
     return jsonify([{"id": str(paciente["_id"]), "nombre": paciente["nombre"], "dni": paciente["dni"]}])

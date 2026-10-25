@@ -7,6 +7,12 @@ def _max_72_bytes(v: str) -> str:
     return v
 
 
+def _contrasena_segura(v: str) -> str:
+    if not (any(c.isupper() for c in v) and any(c.islower() for c in v) and any(c.isdigit() for c in v)):
+        raise ValueError("La contraseña debe tener mayúscula, minúscula y número")
+    return v
+
+
 class RegistroPacienteSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -15,6 +21,8 @@ class RegistroPacienteSchema(BaseModel):
     telefono: str = Field(min_length=6, max_length=20)
     dni: str = Field(pattern=r"^\d{7,8}$")
     password: str = Field(min_length=8)
+
+    _seguridad = field_validator("password")(_contrasena_segura)
 
     _pw = field_validator("password")(_max_72_bytes)
 
