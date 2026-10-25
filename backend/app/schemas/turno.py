@@ -49,6 +49,16 @@ class OtorgarTurnoSchema(BaseModel):
     _fecha = field_validator("fecha_hora")(_futura_y_en_utc)
 
 
+class ReprogramarTurnoSchema(BaseModel):
+    """Lo que manda el administrativo al reprogramar: solo la nueva fecha y hora."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fecha_hora: datetime
+
+    _fecha = field_validator("fecha_hora")(_futura_y_en_utc)
+
+
 class FiltroTurnosSchema(BaseModel):
     """Parámetros de la URL para listar turnos: /api/turnos?estado=solicitado"""
 

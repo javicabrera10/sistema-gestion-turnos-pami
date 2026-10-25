@@ -4,7 +4,7 @@ from flask_jwt_extended import get_jwt_identity
 from app.patterns.turno_state import TransicionInvalida
 from app.repositories.turno_repository import TurnoRepository
 from app.repositories.usuario_repository import UsuarioRepository
-from app.schemas.turno import FiltroTurnosSchema, OtorgarTurnoSchema
+from app.schemas.turno import FiltroTurnosSchema, OtorgarTurnoSchema, ReprogramarTurnoSchema
 from app.security.roles import roles_required
 from app.services.turno_admin_service import HorarioOcupado, MedicoInvalido, TurnoAdminService
 from app.services.turno_service import TurnoNoEncontrado
@@ -119,4 +119,80 @@ def otorgar_turno(turno_id):
         return jsonify(error=str(e)), 409
     except HorarioOcupado:
         return jsonify(error="El médico ya tiene un turno a esa fecha y hora"), 409
+    return jsonify(serializar_turno_con_paciente(turno))
+
+
+@turnos_admin_bp.patch("/<turno_id>/reprogramar")
+@roles_required("administrativo")
+def reprogramar_turno(turno_id):
+    """Cambia la fecha y hora de un turno; el paciente recibe un aviso y tiene que responder (solo administrativo)
+    ---
+    tags: [Turnos]
+    parameters:
+      - in: path
+        name: turno_id
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            fecha_hora: {type: string, example: "2026-11-12T09:00:00"}
+    responses:
+      200:
+        description: Turno reprogramado, queda en estado reprogramado
+      400:
+        description: Fecha inválida o en el pasado
+      401:
+        description: Falta el token
+      403:
+        description: El rol no tiene permiso
+      404:
+        description: El turno no existe
+      409:
+        description: El turno no se puede reprogramar en su estado actual, o el médico ya tiene un turno a esa hora
+    """
+    datos = ReprogramarTurnoSchema.model_validate(request.get_json(silent=True) or {})
+    try:
+        turno = _service().reprogramar(turno_id, get_jwt_identity(), datos)
+    except TurnoNoEncontrado:
+        return jsonify(error="Turno no encontrado"), 404
+    except TransicionInvalida as e:
+        return jsonify(error=str(e)), 409
+    except HorarioOcupado:
+        return jsonify(error="El médico ya tiene un turno a esa fecha y hora"), 409
+    return jsonify(serializar_turno_con_paciente(turno))
+
+
+@turnos_admin_bp.patch("/<turno_id>/cancelar")
+@roles_required("administrativo")
+def cancelar_turno(turno_id):
+    """Cancela un turno otorgado, confirmado o reprogramado; el paciente recibe un aviso (solo administrativo)
+    ---
+    tags: [Turnos]
+    parameters:
+      - in: path
+        name: turno_id
+        type: string
+        required: true
+    responses:
+      200:
+        description: Turno cancelado
+      401:
+        description: Falta el token
+      403:
+        description: El rol no tiene permiso
+      404:
+        description: El turno no existe
+      409:
+        description: El turno no se puede cancelar en su estado actual
+    """
+    try:
+        turno = _service().cancelar(turno_id, get_jwt_identity())
+    except TurnoNoEncontrado:
+        return jsonify(error="Turno no encontrado"), 404
+    except TransicionInvalida as e:
+        return jsonify(error=str(e)), 409
     return jsonify(serializar_turno_con_paciente(turno))

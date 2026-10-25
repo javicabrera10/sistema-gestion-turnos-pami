@@ -574,3 +574,33 @@ body:has(.adm)::after {
     margin-left: 0;
   }
 }
+
+/* Botones de reprogramar y cancelar (agregados por Javi) */
+.adm-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.adm-boton--peligro {
+  background: transparent;
+  border-color: #a62d2d;
+  color: #8a1c1c;
+}
+
+.adm-boton--peligro:hover:not(:disabled) {
+  background: #f8d7d7;
+}
+
+.adm-boton--peligro-solido {
+  background: #a62d2d;
+  border-color: #a62d2d;
+  color: #fff;
+}
+
+.adm-boton--peligro-solido:hover:not(:disabled) {
+  background: #8a1c1c;
+  border-color: #8a1c1c;
+  color: #fff;
+}

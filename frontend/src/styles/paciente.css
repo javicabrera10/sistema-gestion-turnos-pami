@@ -499,3 +499,13 @@ body:has(.pac)::after {
     transform: none;
   }
 }
+/* Estado "reprogramado" (agregado por Javi, mismo color que "otorgado") */
+.pac-turno--reprogramado {
+  --c: #d98e04;
+}
+
+.pac-badge--reprogramado {
+  color: #5c3b00;
+  background: #ffe3a3;
+  border-color: #b87800;
+}

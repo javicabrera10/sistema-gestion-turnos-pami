@@ -18,6 +18,10 @@ TURNO_CONFIRMADO = "turno.confirmado"
 TURNO_RECHAZADO = "turno.rechazado"
 RECETA_EMITIDA = "receta.emitida"
 
+# Eventos del Sprint 2: el administrativo cambia un turno ya otorgado
+TURNO_REPROGRAMADO = "turno.reprogramado"
+TURNO_CANCELADO = "turno.cancelado"
+
 
 class EventBus:
     def __init__(self):
