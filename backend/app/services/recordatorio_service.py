@@ -11,13 +11,19 @@ from app.services.turno_service import datos_evento
 log = logging.getLogger("pami.recordatorios")
 
 
-def ahora_local() -> datetime:
-    """Hora local sin zona horaria, que es como se guardan las fechas de los turnos (la que se ve en pantalla).
+def _diferencia_horaria() -> timedelta:
+    # Argentina es UTC-3 todo el año; se puede cambiar con la variable RECORDATORIOS_UTC_OFFSET
+    return timedelta(hours=int(os.getenv("RECORDATORIOS_UTC_OFFSET", "-3")))
 
-    Argentina es UTC-3 todo el año; se puede cambiar con la variable RECORDATORIOS_UTC_OFFSET.
-    """
-    horas = int(os.getenv("RECORDATORIOS_UTC_OFFSET", "-3"))
-    return datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=horas))).replace(tzinfo=None)
+
+def ahora_local() -> datetime:
+    """Hora local sin zona horaria, que es como se guardan las fechas de los turnos (la que se ve en pantalla)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None) + _diferencia_horaria()
+
+
+def a_hora_local(fecha_utc: datetime) -> datetime:
+    """Pasa una fecha guardada en UTC (creado_en, inicio_plan...) a la hora local."""
+    return fecha_utc + _diferencia_horaria()
 
 
 class RecordatorioService:

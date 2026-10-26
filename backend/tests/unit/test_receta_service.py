@@ -156,3 +156,34 @@ def test_una_orden_no_lleva_plan_de_medicacion(entorno):
 def test_un_id_malformado_no_existe(entorno):
     with pytest.raises(RecetaNoEncontrada):
         entorno.service.emitir("no-es-un-id", entorno.medico)
+
+
+# ---------- Sprint 3: el plan de medicación empieza a contar ----------
+
+def test_al_emitir_se_guarda_cuando_empieza_el_plan(entorno):
+    receta = entorno.service.crear(entorno.medico, _receta(entorno.paciente))
+    assert receta.get("inicio_plan") is None  # mientras es borrador no corre ningún plan
+
+    emitida = entorno.service.emitir(str(receta["_id"]), entorno.medico)
+
+    assert emitida["inicio_plan"] is not None
+
+
+def test_el_plan_cargado_antes_de_emitir_empieza_al_emitir(entorno):
+    receta = entorno.service.crear(entorno.medico, _receta(entorno.paciente))
+    con_plan = entorno.service.registrar_plan(str(receta["_id"]), entorno.medico, PlanSchema.model_validate(PLAN))
+    assert con_plan.get("inicio_plan") is None
+
+    emitida = entorno.service.emitir(str(receta["_id"]), entorno.medico)
+
+    assert emitida["inicio_plan"] is not None
+    assert emitida["plan_medicacion"][0]["medicamento"] == "Ibuprofeno"
+
+
+def test_el_plan_cargado_despues_de_emitir_empieza_cuando_se_carga(entorno):
+    receta = entorno.service.crear(entorno.medico, _receta(entorno.paciente))
+    emitida = entorno.service.emitir(str(receta["_id"]), entorno.medico)
+
+    con_plan = entorno.service.registrar_plan(str(receta["_id"]), entorno.medico, PlanSchema.model_validate(PLAN))
+
+    assert con_plan["inicio_plan"] >= emitida["inicio_plan"]

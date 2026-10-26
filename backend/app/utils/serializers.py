@@ -48,4 +48,6 @@ def serializar_receta(doc: dict) -> dict:
     salida = {k: v for k, v in doc.items() if k != "_id"}
     salida["id"] = str(doc["_id"])
     salida["fecha"] = _iso(doc["fecha"])
+    if "inicio_plan" in salida:
+        salida["inicio_plan"] = _iso(salida["inicio_plan"])
     return salida

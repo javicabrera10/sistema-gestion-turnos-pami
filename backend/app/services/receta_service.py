@@ -1,11 +1,17 @@
 import logging
 from dataclasses import asdict
+from datetime import datetime, timezone
 
 from app.models.receta import EstadoReceta, TipoReceta
 from app.patterns.documento_factory import DocumentoFactory
 from app.patterns.observer import RECETA_EMITIDA
 
 log = logging.getLogger("pami.recetas")
+
+
+def _ahora() -> datetime:
+    # Mongo guarda datetimes en UTC sin zona horaria (igual que en el resto de la app)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class RecetaNoEncontrada(Exception):
@@ -77,7 +83,7 @@ class RecetaService:
         receta = self._receta_del_medico(receta_id, medico_id)
         if receta["estado"] == EstadoReceta.EMITIDA.value:
             raise RecetaYaEmitida()
-        self.repo.actualizar(receta["_id"], {"estado": EstadoReceta.EMITIDA.value})
+        self.repo.actualizar(receta["_id"], {"estado": EstadoReceta.EMITIDA.value, "inicio_plan": _ahora()})
         emitida = self.repo.get_by_id(receta["_id"])
         log.info("receta emitida id=%s medico=%s paciente=%s", receta["_id"], medico_id, receta["paciente_id"])
         if self.bus is not None:
@@ -96,7 +102,11 @@ class RecetaService:
         receta = self._receta_del_medico(receta_id, medico_id)
         if receta["tipo"] != TipoReceta.RECETA.value:
             raise PlanNoPermitido()
-        self.repo.actualizar(receta["_id"], {"plan_medicacion": [i.model_dump() for i in datos.plan]})
+        cambios = {"plan_medicacion": [i.model_dump() for i in datos.plan]}
+        if receta["estado"] == EstadoReceta.EMITIDA.value:
+            # el paciente ya puede ver la receta: el tratamiento empieza cuando se carga el plan
+            cambios["inicio_plan"] = _ahora()
+        self.repo.actualizar(receta["_id"], cambios)
         log.info("plan de medicación registrado receta=%s medico=%s", receta["_id"], medico_id)
         return self.repo.get_by_id(receta["_id"])
 
