@@ -32,6 +32,7 @@ def create_app(config_class=Config, db=None):
     from .routes.turnos import turnos_bp
     from .routes.turnos_admin import turnos_admin_bp
     from .patterns.observers import registrar_observers
+    from .routes.familiar import familiar_bp
     from .routes.medicos import medicos_bp
     from .routes.notificaciones import notificaciones_bp
     from .routes.pacientes import pacientes_bp
@@ -48,6 +49,7 @@ def create_app(config_class=Config, db=None):
     app.register_blueprint(pacientes_bp, url_prefix="/api/pacientes")
     app.register_blueprint(notificaciones_bp, url_prefix="/api/notificaciones")
     app.register_blueprint(recordatorios_bp, url_prefix="/api/recordatorios")
+    app.register_blueprint(familiar_bp, url_prefix="/api/familiar")
     registrar_observers(app)
     registrar_encabezados(app)
 

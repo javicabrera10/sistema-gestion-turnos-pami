@@ -44,6 +44,20 @@ def serializar_notificacion(doc: dict) -> dict:
     return salida
 
 
+def serializar_familiar(doc: dict) -> dict:
+    salida = {k: v for k, v in doc.items() if k != "_id"}
+    salida["id"] = str(doc["_id"])
+    salida["autorizado_en"] = _iso(doc["autorizado_en"])
+    return salida
+
+
+def serializar_mensaje_familiar(doc: dict) -> dict:
+    salida = {k: v for k, v in doc.items() if k != "_id"}
+    salida["id"] = str(doc["_id"])
+    salida["creado_en"] = _iso(doc["creado_en"])
+    return salida
+
+
 def serializar_receta(doc: dict) -> dict:
     salida = {k: v for k, v in doc.items() if k != "_id"}
     salida["id"] = str(doc["_id"])

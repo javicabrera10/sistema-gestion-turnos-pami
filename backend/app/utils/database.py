@@ -25,6 +25,11 @@ def crear_indices(db) -> None:
     db.notificaciones.create_index(
         [("destinatario_id", ASCENDING), ("creada_en", DESCENDING)], name="ix_notificaciones_destinatario"
     )
+    # un solo familiar autorizado por paciente, y su bandeja de avisos enviados
+    db.familiares_autorizados.create_index([("paciente_id", ASCENDING)], unique=True, name="uq_familiar_paciente")
+    db.mensajes_familiar.create_index(
+        [("paciente_id", ASCENDING), ("creado_en", DESCENDING)], name="ix_mensajes_familiar_paciente"
+    )
     # un aviso de toma por receta, día, medicamento y horario
     db.avisos_toma.create_index(
         [("receta_id", ASCENDING), ("dia", ASCENDING), ("medicamento", ASCENDING), ("horario", ASCENDING)],
