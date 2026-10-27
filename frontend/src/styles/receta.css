@@ -482,3 +482,48 @@ body:has(.rec)::after {
     padding: 1.3rem 1.1rem 1.5rem;
   }
 }
+
+/* Aviso de toma (plan de medicación) dentro de cada medicamento */
+.rec-plan {
+  margin-top: 0.9rem;
+  padding: 0.9rem 1rem;
+  background: #eef5fa;
+  border: 1.5px dashed #24405a;
+  border-radius: 6px;
+}
+.rec-plan-titulo {
+  margin: 0 0 0.2rem;
+  font-weight: 700;
+  color: var(--p-tinta);
+}
+.rec-plan-titulo span {
+  font-weight: 400;
+}
+.rec-plan-ayuda {
+  margin: 0 0 0.8rem;
+  color: #35536b;
+}
+.rec-plan-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.8rem;
+  align-items: start;
+}
+.rec-horarios {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.rec-horarios-titulo {
+  font-weight: 700;
+  color: var(--p-tinta);
+}
+.rec-horario {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+.rec-horario input {
+  max-width: 180px;
+}

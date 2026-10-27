@@ -46,4 +46,6 @@ class Receta:
     plan_medicacion: list[ItemPlan] = field(default_factory=list)
     estado: str = EstadoReceta.BORRADOR.value
     fecha: datetime = field(default_factory=_ahora)
+    # Cuándo empieza a contar el plan de medicación: al emitir la receta (o al cargar el plan si ya estaba emitida)
+    inicio_plan: datetime | None = None
     id: str | None = None

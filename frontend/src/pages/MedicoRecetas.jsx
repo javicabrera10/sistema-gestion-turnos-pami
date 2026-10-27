@@ -6,7 +6,37 @@ import '../styles/receta.css';
 // El backend acepta /api/recetas con y sin barra final (strict_slashes=False), así que no hay 308.
 const RUTA_RECETAS = '/recetas';
 
-const MED_VACIO = { nombre: '', dosis: '', horario_toma: '' };
+const MED_VACIO = { nombre: '', dosis: '', horario_toma: '', horarios: [], duracion_dias: '' };
+const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+const MAX_HORARIOS = 12; // el backend no acepta más por medicamento
+
+// Plan de medicación: solo entran los medicamentos que tienen horarios (el aviso de toma es opcional)
+function armarPlan(medicamentos) {
+  return medicamentos
+    .filter((m) => m.horarios.length > 0)
+    .map((m) => ({
+      medicamento: m.nombre.trim(),
+      dosis: m.dosis.trim(),
+      horarios: [...m.horarios].sort(),
+      duracion_dias: Number(m.duracion_dias),
+    }));
+}
+
+// Mismas reglas que el backend, para explicar el problema antes de enviar. El backend siempre valida de nuevo.
+function problemaDelPlan(medicamentos) {
+  for (const m of medicamentos) {
+    const nombre = m.nombre.trim() || 'el medicamento';
+    const conHorarios = m.horarios.length > 0;
+    const conDuracion = String(m.duracion_dias).trim() !== '';
+    if (!conHorarios && !conDuracion) continue;
+    if (m.horarios.some((h) => !HORA.test(h))) return `Completá todos los horarios de ${nombre}.`;
+    if (!conHorarios || !conDuracion) return `Para el aviso de toma de ${nombre} cargá los horarios y la duración, o dejá los dos vacíos.`;
+    const dias = Number(m.duracion_dias);
+    if (!Number.isInteger(dias) || dias < 1 || dias > 365) return `La duración de ${nombre} tiene que ser de 1 a 365 días.`;
+    if (new Set(m.horarios).size !== m.horarios.length) return `Hay horarios repetidos en ${nombre}.`;
+  }
+  return '';
+}
 
 export default function MedicoRecetas() {
   const { user, logout } = useAuth();
@@ -50,6 +80,12 @@ export default function MedicoRecetas() {
   const cambiarMed = (i, campo, valor) =>
     setMedicamentos((prev) => prev.map((m, j) => (j === i ? { ...m, [campo]: valor } : m)));
 
+  const cambiarMedicamento = (i, cambio) =>
+    setMedicamentos((prev) => prev.map((m, j) => (j === i ? { ...m, ...cambio(m) } : m)));
+  const agregarHorario = (i) => cambiarMedicamento(i, (m) => ({ horarios: [...m.horarios, ''] }));
+  const cambiarHorario = (i, k, valor) => cambiarMedicamento(i, (m) => ({ horarios: m.horarios.map((h, n) => (n === k ? valor : h)) }));
+  const quitarHorario = (i, k) => cambiarMedicamento(i, (m) => ({ horarios: m.horarios.filter((_, n) => n !== k) }));
+
   const limpiar = () => {
     setMedicamentos([{ ...MED_VACIO }]);
     setIndicaciones('');
@@ -68,6 +104,10 @@ export default function MedicoRecetas() {
     if (tipo === 'orden' && indicaciones.trim().length < 3) {
       return setResultado({ ok: false, texto: 'Escribí qué estudio o práctica indicás.' });
     }
+    if (tipo === 'receta') {
+      const problema = problemaDelPlan(medicamentos);
+      if (problema) return setResultado({ ok: false, texto: problema });
+    }
 
     setEnviando(true);
     try {
@@ -78,10 +118,23 @@ export default function MedicoRecetas() {
         indicaciones: indicaciones.trim(),
         medicamentos: tipo === 'receta' ? medicamentos.map((m) => ({ nombre: m.nombre.trim(), dosis: m.dosis.trim(), horario_toma: m.horario_toma.trim() })) : [],
       });
-      if (emitir) await api.post(`/recetas/${creada.id}/emitir`);
       const nombre = paciente?.nombre || `paciente ${pacienteId}`;
-      setHistorial((h) => [{ id: creada.id, tipo, nombre, emitida: emitir }, ...h]);
-      setResultado({ ok: true, texto: `${tipo === 'receta' ? 'Receta' : 'Orden'} ${emitir ? 'emitida al paciente' : 'guardada como borrador'}.` });
+      const plan = tipo === 'receta' ? armarPlan(medicamentos) : [];
+      // El plan se carga antes de emitir: el tratamiento empieza a contar cuando la receta se emite
+      if (plan.length > 0) {
+        try {
+          await api.put(`/recetas/${creada.id}/plan`, { plan });
+        } catch (e) {
+          setHistorial((h) => [{ id: creada.id, tipo, nombre, emitida: false, conPlan: false }, ...h]);
+          setResultado({ ok: false, texto: `La receta quedó guardada como borrador, pero no se pudo cargar el plan de toma: ${e.message}` });
+          limpiar();
+          return;
+        }
+      }
+      if (emitir) await api.post(`/recetas/${creada.id}/emitir`);
+      setHistorial((h) => [{ id: creada.id, tipo, nombre, emitida: emitir, conPlan: plan.length > 0 }, ...h]);
+      const avisoToma = plan.length > 0 && emitir ? ' El paciente va a recibir un aviso a cada horario de toma.' : '';
+      setResultado({ ok: true, texto: `${tipo === 'receta' ? 'Receta' : 'Orden'} ${emitir ? 'emitida al paciente' : 'guardada como borrador'}.${avisoToma}` });
       limpiar();
     } catch (e) {
       setResultado({ ok: false, texto: e.message });
@@ -151,6 +204,26 @@ export default function MedicoRecetas() {
                     <label>Dosis<input value={m.dosis} onChange={(e) => cambiarMed(i, 'dosis', e.target.value)} placeholder="Ej. 400 mg" /></label>
                     <label>Horario<input value={m.horario_toma} onChange={(e) => cambiarMed(i, 'horario_toma', e.target.value)} placeholder="Ej. Cada 8 horas" /></label>
                   </div>
+                  <div className="rec-plan">
+                    <p className="rec-plan-titulo">Aviso de toma al paciente <span>(opcional)</span></p>
+                    <p className="rec-plan-ayuda">Si cargás los horarios y los días, el paciente recibe un aviso a cada hora, desde que emitís la receta.</p>
+                    <div className="rec-plan-campos">
+                      <label>
+                        Duración (días)
+                        <input type="number" min="1" max="365" inputMode="numeric" value={m.duracion_dias} onChange={(e) => cambiarMed(i, 'duracion_dias', e.target.value)} placeholder="Ej. 7" />
+                      </label>
+                      <div className="rec-horarios">
+                        <span className="rec-horarios-titulo">Horarios de toma</span>
+                        {m.horarios.map((h, k) => (
+                          <div key={k} className="rec-horario">
+                            <input type="time" value={h} onChange={(e) => cambiarHorario(i, k, e.target.value)} aria-label={`Horario ${k + 1} del medicamento ${i + 1}`} />
+                            <button type="button" className="rec-quitar" onClick={() => quitarHorario(i, k)} aria-label={`Quitar horario ${k + 1} del medicamento ${i + 1}`}>Quitar</button>
+                          </div>
+                        ))}
+                        <button type="button" className="rec-boton" onClick={() => agregarHorario(i)} disabled={m.horarios.length >= MAX_HORARIOS}>+ Agregar horario</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
               <button type="button" className="rec-boton" onClick={() => setMedicamentos((p) => [...p, { ...MED_VACIO }])}>+ Agregar otro medicamento</button>
@@ -183,7 +256,7 @@ export default function MedicoRecetas() {
             <ul>
               {historial.map((h) => (
                 <li key={h.id}>
-                  <span>{h.tipo === 'receta' ? '💊' : '📋'} {h.nombre}</span>
+                  <span>{h.tipo === 'receta' ? '💊' : '📋'} {h.nombre}{h.conPlan ? ' · con aviso de toma' : ''}</span>
                   <span className={`rec-estado rec-estado--${h.emitida ? 'emitida' : 'borrador'}`}>{h.emitida ? 'Emitida' : 'Borrador'}</span>
                 </li>
               ))}

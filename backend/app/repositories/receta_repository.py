@@ -1,6 +1,6 @@
 from bson.errors import InvalidId
 
-from app.models.receta import EstadoReceta
+from app.models.receta import EstadoReceta, TipoReceta
 
 from .base import BaseRepository
 
@@ -27,6 +27,16 @@ class RecetaRepository(BaseRepository):
         if solo_emitidas:
             filtro["estado"] = EstadoReceta.EMITIDA.value
         return list(self.col.find(filtro).sort("fecha", -1))
+
+    def listar_con_plan_activo(self):
+        """Recetas emitidas con plan de medicación cargado y con inicio (lo que necesita el aviso de toma)."""
+        filtro = {
+            "tipo": TipoReceta.RECETA.value,
+            "estado": EstadoReceta.EMITIDA.value,
+            "plan_medicacion": {"$exists": True, "$ne": []},
+            "inicio_plan": {"$ne": None},
+        }
+        return list(self.col.find(filtro))
 
     def actualizar(self, id_, campos: dict) -> None:
         self.update(id_, campos)

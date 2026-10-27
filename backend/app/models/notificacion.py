@@ -14,14 +14,16 @@ TIPO_TURNO_CANCELADO = "turno_cancelado"
 TIPO_TURNO_CONFIRMADO = "turno_confirmado"
 TIPO_TURNO_RECHAZADO = "turno_rechazado"
 TIPO_RECORDATORIO = "recordatorio"
+TIPO_TOMA_MEDICACION = "toma_medicacion"
 
 
 @dataclass
 class Notificacion:
     destinatario_id: str
-    turno_id: str
     mensaje: str
     tipo: str = TIPO_TURNO_OTORGADO
+    turno_id: str | None = None  # los avisos de turnos lo llevan
+    receta_id: str | None = None  # los avisos de toma de medicación lo llevan
     leida: bool = False
     creada_en: datetime = field(default_factory=_ahora)
     id: str | None = None

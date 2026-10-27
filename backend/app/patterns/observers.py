@@ -9,8 +9,10 @@ from app.patterns.observer import (
     TURNO_RECHAZADO,
     TURNO_REPROGRAMADO,
 )
+from app.repositories.familiar_repository import FamiliarRepository, MensajeFamiliarRepository
 from app.repositories.notificacion_repository import NotificacionRepository
 from app.repositories.usuario_repository import UsuarioRepository
+from app.services.familiar_service import EVENTOS_PARA_FAMILIAR, FamiliarService
 from app.services.notificacion_service import NotificacionService
 
 
@@ -48,3 +50,18 @@ def registrar_observers(app) -> None:
     bus.suscribir(TURNO_CANCELADO, notificar_turno_cancelado)
     bus.suscribir(TURNO_CONFIRMADO, notificar_turno_confirmado)
     bus.suscribir(TURNO_RECHAZADO, notificar_turno_rechazado)
+
+    def avisar_al_familiar(evento: str):
+        """Observer que le avisa al familiar autorizado del paciente cuando pasa `evento` con uno de sus turnos."""
+
+        def handler(datos: dict) -> None:
+            familiares = FamiliarService(FamiliarRepository(app.db), MensajeFamiliarRepository(app.db))
+            if familiares.obtener(datos["paciente_id"]) is None:
+                return  # nadie autorizado: no hace falta ni buscar el nombre del paciente
+            familiares.avisar_turno(evento, datos, nombre_del_paciente(datos))
+
+        handler.__name__ = f"avisar_al_familiar[{evento}]"
+        return handler
+
+    for evento in EVENTOS_PARA_FAMILIAR:
+        bus.suscribir(evento, avisar_al_familiar(evento))

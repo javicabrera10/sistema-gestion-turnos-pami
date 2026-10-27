@@ -250,17 +250,20 @@ export default function AdminTurnos() {
     cargar();
   };
 
-  // Crea los recordatorios de los turnos confirmados que se acercan (POST /api/recordatorios/ejecutar)
+  // Crea los recordatorios de turnos y los avisos de toma de medicación (POST /api/recordatorios/ejecutar)
   const generarRecordatorios = async () => {
     setGenerando(true);
     setError('');
     setExito('');
     try {
-      const { enviados } = await api.post('/recordatorios/ejecutar');
+      const { enviados = 0, tomas = 0 } = await api.post('/recordatorios/ejecutar');
+      const partes = [];
+      if (enviados > 0) partes.push(enviados === 1 ? '1 recordatorio de turno' : `${enviados} recordatorios de turno`);
+      if (tomas > 0) partes.push(tomas === 1 ? '1 aviso de toma de medicación' : `${tomas} avisos de toma de medicación`);
       setExito(
-        enviados === 0
+        partes.length === 0
           ? 'No hay recordatorios nuevos para enviar.'
-          : `Se ${enviados === 1 ? 'creó 1 recordatorio' : `crearon ${enviados} recordatorios`}. Los pacientes ya los ven en su campana.`,
+          : `Se generaron: ${partes.join(' y ')}. Los pacientes ya los ven en su campana.`,
       );
     } catch (e) {
       setError(e.message);

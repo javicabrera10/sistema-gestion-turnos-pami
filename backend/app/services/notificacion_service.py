@@ -3,6 +3,7 @@ from dataclasses import asdict
 
 from app.models.notificacion import (
     TIPO_RECORDATORIO,
+    TIPO_TOMA_MEDICACION,
     TIPO_TURNO_CANCELADO,
     TIPO_TURNO_CONFIRMADO,
     TIPO_TURNO_OTORGADO,
@@ -31,9 +32,12 @@ class NotificacionService:
     def __init__(self, repo):
         self.repo = repo
 
-    def _crear(self, destinatario_id: str, turno_id: str, tipo: str, mensaje: str) -> str:
-        doc = asdict(Notificacion(destinatario_id=destinatario_id, turno_id=turno_id, mensaje=mensaje, tipo=tipo))
-        doc.pop("id")
+    def _crear(self, destinatario_id: str, turno_id: str | None, tipo: str, mensaje: str, receta_id: str | None = None) -> str:
+        notificacion = Notificacion(
+            destinatario_id=destinatario_id, mensaje=mensaje, tipo=tipo, turno_id=turno_id, receta_id=receta_id
+        )
+        # solo se guardan los campos que tienen valor: un aviso de turno no lleva receta_id y uno de toma no lleva turno_id
+        doc = {k: v for k, v in asdict(notificacion).items() if v is not None}
         id_ = self.repo.crear(doc)
         # el mensaje no se loguea: puede incluir el nombre del paciente
         log.info("notificación creada id=%s tipo=%s destinatario=%s", id_, tipo, destinatario_id)
@@ -71,6 +75,11 @@ class NotificacionService:
         """Le recuerda al paciente que se acerca su turno (lo genera el servicio de recordatorios)."""
         mensaje = f"Recordatorio: tenés un turno{_de_especialidad(datos)} el {_cuando(datos['fecha_hora'])}."
         return self._crear(datos["paciente_id"], datos["turno_id"], TIPO_RECORDATORIO, mensaje)
+
+    def crear_toma_medicacion(self, datos: dict) -> str:
+        """Le avisa al paciente que es hora de tomar un medicamento de su plan (lo genera el servicio de tomas)."""
+        mensaje = f"Es hora de tomar {datos['medicamento']} ({datos['dosis']}) a las {datos['horario']} hs."
+        return self._crear(datos["paciente_id"], None, TIPO_TOMA_MEDICACION, mensaje, receta_id=datos["receta_id"])
 
     def listar_mias(self, destinatario_id: str) -> list[dict]:
         return self.repo.listar_por_destinatario(destinatario_id)

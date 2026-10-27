@@ -8,11 +8,11 @@ El backend (Flask + MongoDB) usa cinco patrones de diseño. Para cada uno se ind
 | Observer | `backend/app/patterns/observer.py` y `observers.py` | Que un módulo avise lo que pasó sin conocer a quien reacciona (notificaciones) |
 | State | `backend/app/patterns/turno_state.py` | Controlar qué cambios de estado de un turno están permitidos |
 | Factory | `backend/app/patterns/documento_factory.py` y `create_app()` | Centralizar cómo se arman las recetas, las órdenes y la aplicación |
-| Strategy | `backend/app/patterns/recordatorio_strategy.py` | Cambiar las reglas de los recordatorios sin tocar el servicio |
+| Strategy | `backend/app/patterns/recordatorio_strategy.py` y `canal_strategy.py` | Cambiar las reglas de los recordatorios y el canal de aviso al familiar sin tocar los servicios |
 
 ## 1. Repository
 
-**Dónde.** Una clase por colección en `backend/app/repositories/`: `TurnoRepository`, `UsuarioRepository`, `RecetaRepository` y `NotificacionRepository`, todas sobre `BaseRepository`. Los servicios (`backend/app/services/`) reciben el repositorio por parámetro y nunca escriben una consulta de MongoDB.
+**Dónde.** Una clase por colección en `backend/app/repositories/`: `TurnoRepository`, `UsuarioRepository`, `RecetaRepository`, `NotificacionRepository`, `AvisoTomaRepository`, `FamiliarRepository` y `MensajeFamiliarRepository`, todas sobre `BaseRepository`. Los servicios (`backend/app/services/`) reciben el repositorio por parámetro y nunca escriben una consulta de MongoDB.
 
 ```python
 class TurnoService:
@@ -26,6 +26,7 @@ class TurnoService:
 - Las consultas quedan en un solo lugar. Por ejemplo, `TurnoRepository.horario_ocupado` y `listar_confirmados_entre` se escriben una vez y se usan desde varios servicios.
 - Los repositorios de turnos, recetas y notificaciones traducen los errores de la base: un id mal formado en la URL devuelve "no existe" (`InvalidId` se convierte en `None`) en lugar de un error 500.
 - Las pruebas unitarias usan `mongomock` a través de los mismos repositorios, sin levantar MongoDB.
+- El repositorio también esconde detalles de la base: `AvisoTomaRepository.registrar` devuelve `False` si el aviso de toma ya existía (lo garantiza un índice único), y el servicio de tomas no sabe cómo.
 
 **Pruebas.** `tests/unit/test_turno_repository.py` y todos los tests de servicios.
 
@@ -35,10 +36,11 @@ class TurnoService:
 
 | Evento | Lo publica | Qué hace el observer |
 |---|---|---|
-| `turno.otorgado` | `TurnoAdminService.otorgar` | Avisa al paciente la fecha y hora |
-| `turno.reprogramado` | `TurnoAdminService.reprogramar` | Avisa al paciente la nueva fecha para que la acepte o la rechace |
-| `turno.cancelado` | `TurnoAdminService.cancelar` | Avisa al paciente que se canceló |
-| `turno.confirmado` / `turno.rechazado` | `TurnoService` | Avisa al administrativo que otorgó el turno qué respondió el paciente |
+| `turno.otorgado` | `TurnoAdminService.otorgar` | Avisa al paciente la fecha y hora, y al familiar autorizado (si hay) |
+| `turno.reprogramado` | `TurnoAdminService.reprogramar` | Avisa al paciente la nueva fecha para que la acepte o la rechace, y al familiar autorizado |
+| `turno.cancelado` | `TurnoAdminService.cancelar` | Avisa al paciente que se canceló, y al familiar autorizado |
+| `turno.confirmado` / `turno.rechazado` | `TurnoService` | Avisa al administrativo que otorgó el turno qué respondió el paciente; si confirmó, también al familiar autorizado |
+| `turno.recordatorio` | `RecordatorioService.procesar` | Avisa al familiar autorizado que se acerca el turno |
 
 ```python
 # el servicio solo cuenta lo que pasó
@@ -48,14 +50,17 @@ self.bus.publicar(TURNO_CANCELADO, datos_evento(turno))
 bus.suscribir(TURNO_CANCELADO, notificar_turno_cancelado)
 ```
 
+En el Sprint 3 se sumó el observer `avisar_al_familiar`, suscrito a cinco eventos (`EVENTOS_PARA_FAMILIAR`). Se agregó sin modificar ninguno de los servicios que publican esos eventos: solo `RecordatorioService` pasó a publicar `turno.recordatorio`.
+
 **Problema.** Los turnos no deberían depender del módulo de notificaciones. Si `TurnoAdminService` llamara directamente a `NotificacionService`, cada aviso nuevo (SMS, mail, recordatorio) obligaría a modificar el código de turnos.
 
 **Por qué es adecuado.**
 - Agregar una reacción nueva es suscribir otra función; los servicios de turnos no se tocan.
 - Un observer que falla no rompe la operación principal: `EventBus.publicar` registra el error y sigue. Cancelar un turno funciona aunque falle la notificación.
 - El evento no se loguea con sus datos, porque pueden incluir información del paciente.
+- El aviso al familiar fue la prueba: una funcionalidad nueva que escucha eventos existentes sin cambiar el código que los produce. Y si falla el envío, el turno se otorga igual (hay una prueba que lo comprueba).
 
-**Pruebas.** `tests/unit/test_event_bus.py`, `tests/unit/test_turno_admin_cambios.py` (se publica el evento correcto y no se publica nada si la transición falla) y `tests/e2e/test_notificaciones.py`.
+**Pruebas.** `tests/unit/test_event_bus.py`, `tests/unit/test_turno_admin_cambios.py` (se publica el evento correcto y no se publica nada si la transición falla) `tests/e2e/test_notificaciones.py` y `tests/e2e/test_familiar_avisos.py` (el familiar recibe cada evento, y un envío roto no rompe la operación).
 
 ## 3. State
 
@@ -100,6 +105,10 @@ nuevo_estado = estado_de(turno["estado"]).cancelar()   # lanza TransicionInvalid
 
 ## 5. Strategy
 
+Se usa en dos lugares: las reglas de los recordatorios y los canales de aviso al familiar.
+
+### 5.1 Reglas de recordatorio
+
 **Dónde.** `backend/app/patterns/recordatorio_strategy.py`. La interfaz es `ReglaRecordatorio` y las estrategias son `Recordar24Horas` y `Recordar2Horas`. El contexto que las usa es `RecordatorioService` (`backend/app/services/recordatorio_service.py`).
 
 ```python
@@ -124,6 +133,30 @@ aplicables = [r for r in self.reglas if r.debe_recordar(turno["fecha_hora"], aho
 
 **Pruebas.** `tests/unit/test_recordatorio_strategy.py`, `tests/unit/test_recordatorio_service.py` y `tests/e2e/test_recordatorios.py`.
 
+### 5.2 Canal de aviso al familiar
+
+**Dónde.** `backend/app/patterns/canal_strategy.py`. La interfaz es `CanalEnvio` y las estrategias son `CanalSMS` y `CanalEmail`. El contexto que las usa es `FamiliarService.avisar_turno` (`backend/app/services/familiar_service.py`).
+
+```python
+class CanalEnvio(ABC):
+    @abstractmethod
+    def enviar(self, familiar, texto) -> dict: ...   # devuelve canal, destino, asunto y texto
+
+# el servicio usa el canal que eligió el paciente sin saber cuál es
+entrega = canal_por_nombre(familiar["canal"], self.canales).enviar(familiar, texto)
+```
+
+**Problema.** Cada canal arma el mensaje de otra forma: un SMS no puede pasar de 160 caracteres y no tiene asunto; un email lleva asunto, saludo y una aclaración de por qué se lo recibe. Con `if canal == "sms"` dentro del servicio, cada canal nuevo (por ejemplo WhatsApp) lo modifica.
+
+**Por qué es adecuado.**
+- Agregar un canal es crear una clase con el mismo método. Hay pruebas que lo demuestran con un canal propio y con un canal falso inyectado en el servicio.
+- El envío es **simulado**: el canal devuelve el mensaje tal como saldría y el servicio lo guarda en la bandeja de salida del paciente (`mensajes_familiar`), que el paciente ve en su pantalla. Con un proveedor real, solo cambiaría el cuerpo de `enviar`.
+- El canal no conoce la base de datos y el servicio no conoce los canales concretos: cada uno se prueba por separado.
+
+**Datos mínimos.** El texto lo arma `texto_para_familiar` con el nombre de pila, el día y la hora. Nunca lleva especialidad, motivo ni datos de recetas, y los avisos de toma de medicación no se envían al familiar.
+
+**Pruebas.** `tests/unit/test_canal_strategy.py`, `tests/unit/test_familiar_avisos.py` y `tests/e2e/test_familiar_avisos.py`.
+
 ## Cómo trabajan juntos
 
 Un ejemplo completo: el administrativo reprograma un turno.
@@ -132,8 +165,9 @@ Un ejemplo completo: el administrativo reprograma un turno.
 2. **State** comprueba que el turno se puede reprogramar y devuelve el nuevo estado.
 3. **Repository** guarda la nueva fecha y el estado.
 4. El servicio publica `turno.reprogramado` en el **Observer** (`EventBus`).
-5. El observer crea la notificación para el paciente.
-6. Más tarde, cuando el paciente confirma, el mismo turno pasa a confirmado y el recordatorio lo toma con **Strategy**.
+5. Un observer crea la notificación para el paciente.
+6. Otro observer, `avisar_al_familiar`, mira si el paciente autorizó a un familiar. Si es así, el canal que eligió (**Strategy**) arma el mensaje con datos mínimos y queda en la bandeja de salida.
+7. Más tarde, cuando el paciente confirma, el mismo turno pasa a confirmado y el recordatorio lo toma con **Strategy** (las reglas de 24 y 2 horas).
 
 ## Preguntas que pueden hacer en la defensa
 
@@ -141,4 +175,7 @@ Un ejemplo completo: el administrativo reprograma un turno.
 - **¿Qué pasa si agrego un estado nuevo?** Se agrega una clase en `turno_state.py` y sus transiciones; los servicios no cambian.
 - **¿Cómo se agrega una regla de recordatorio nueva?** Se crea una clase que hereda de `ReglaRecordatorio` y se la agrega a `REGLAS_DISPONIBLES`.
 - **¿Para qué sirve el Repository si ya usamos MongoDB?** Para tener las consultas en un lugar y poder probar la lógica con `mongomock`.
+- **¿Cómo se agrega un canal de aviso nuevo?** Se crea una clase que hereda de `CanalEnvio` y se la suma a `CANALES`; el servicio de familiares no cambia.
+- **¿Por qué el aviso al familiar es simulado?** Porque no hay un proveedor real de SMS ni de email en el proyecto. La estrategia deja la interfaz lista y el paciente ve en pantalla qué se enviaría.
+- **¿Qué datos se comparten con el familiar?** Solo el nombre de pila, que es un turno médico, y el día y la hora, y solo si el paciente dio su consentimiento. No se comparte especialidad, motivo, recetas ni medicación.
 - **¿Qué diferencia hay entre State y Strategy?** En State el objeto cambia de comportamiento según su estado y las transiciones son parte del flujo; en Strategy se elige entre algoritmos intercambiables y no hay "estado actual".

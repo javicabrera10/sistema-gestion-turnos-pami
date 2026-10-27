@@ -66,7 +66,7 @@ def test_el_administrativo_genera_el_recordatorio_de_un_turno_de_manana(client, 
     resp = _ejecutar(client, h_admin)
 
     assert resp.status_code == 200
-    assert resp.get_json() == {"enviados": 1}
+    assert resp.get_json() == {"enviados": 1, "tomas": 0}
     recordatorio = _recordatorios(client, h_paciente)[0]
     assert recordatorio["turno_id"] == turno_id
     assert recordatorio["mensaje"].startswith("Recordatorio: tenés un turno de Cardiología")
@@ -76,22 +76,22 @@ def test_el_administrativo_genera_el_recordatorio_de_un_turno_de_manana(client, 
 def test_ejecutarlo_de_nuevo_no_duplica_el_recordatorio(client, h_paciente, h_admin, crear_turno):
     crear_turno(20)
 
-    assert _ejecutar(client, h_admin).get_json() == {"enviados": 1}
-    assert _ejecutar(client, h_admin).get_json() == {"enviados": 0}
+    assert _ejecutar(client, h_admin).get_json()["enviados"] == 1
+    assert _ejecutar(client, h_admin).get_json()["enviados"] == 0
     assert len(_recordatorios(client, h_paciente)) == 1
 
 
 def test_no_recuerda_turnos_lejanos(client, h_paciente, h_admin, crear_turno):
     crear_turno(100)
 
-    assert _ejecutar(client, h_admin).get_json() == {"enviados": 0}
+    assert _ejecutar(client, h_admin).get_json()["enviados"] == 0
     assert _recordatorios(client, h_paciente) == []
 
 
 def test_no_recuerda_un_turno_que_el_paciente_todavia_no_confirmo(client, h_paciente, h_admin, crear_turno):
     crear_turno(20, confirmar=False)
 
-    assert _ejecutar(client, h_admin).get_json() == {"enviados": 0}
+    assert _ejecutar(client, h_admin).get_json()["enviados"] == 0
     assert _recordatorios(client, h_paciente) == []
 
 
@@ -102,7 +102,7 @@ def test_si_se_reprograma_el_turno_el_recordatorio_vuelve_a_generarse(client, h_
     client.patch(f"/api/turnos/{turno_id}/reprogramar", json={"fecha_hora": _en(22)}, headers=h_admin)
     client.patch(f"/api/turnos/{turno_id}/confirmar", headers=h_paciente)
 
-    assert _ejecutar(client, h_admin).get_json() == {"enviados": 1}
+    assert _ejecutar(client, h_admin).get_json()["enviados"] == 1
     assert len(_recordatorios(client, h_paciente)) == 2
 
 
@@ -153,7 +153,9 @@ def test_el_script_crea_los_recordatorios_e_informa_cuantos(app, crear_turno, mo
     monkeypatch.setattr(enviar_recordatorios, "create_app", lambda: app)
 
     enviar_recordatorios.main()
-    assert "Recordatorios creados: 1" in capsys.readouterr().out
+    salida = capsys.readouterr().out
+    assert "Recordatorios creados: 1" in salida
+    assert "Avisos de toma creados: 0" in salida
 
     enviar_recordatorios.main()
     assert "Recordatorios creados: 0" in capsys.readouterr().out
