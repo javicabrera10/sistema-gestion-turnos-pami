@@ -1,0 +1,139 @@
+/* Pantalla "Mi familiar autorizado": usa la misma base visual del paciente (.pac) */
+
+.fam-bloque {
+  margin: 0 0 1.25rem;
+  padding: 1.5rem 1.6rem 1.8rem;
+  color: var(--p-tinta);
+  background: var(--p-hielo);
+  clip-path: var(--corte);
+}
+
+.fam-bloque h2 {
+  margin: 0 0 0.8rem;
+  font-family: var(--f-titulo);
+  font-weight: 400;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--p-tinta);
+}
+
+.fam-bloque p {
+  margin: 0 0 0.6rem;
+}
+
+.fam-privacidad {
+  background: var(--p-hielo-claro);
+}
+
+.fam-actual {
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 1.1rem;
+  color: #0a4a36;
+  background: #c6f0de;
+  border-left: 6px solid #14795a;
+  border-radius: 6px;
+}
+
+.fam-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.fam-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+  color: var(--p-tinta);
+}
+
+.fam-form input[type='text'],
+.fam-form input[type='email'],
+.fam-form input[type='tel'],
+.fam-form select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6rem 0.8rem;
+  font: inherit;
+  font-weight: 400;
+  color: var(--p-tinta);
+  background: #fff;
+  border: 2px solid #24405a;
+  border-radius: 6px;
+}
+
+.fam-form input:focus-visible,
+.fam-form select:focus-visible {
+  outline: 3px solid #1d4160;
+  outline-offset: 2px;
+}
+
+.fam-form .fam-consentimiento {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  font-weight: 400;
+  background: #fff;
+  border: 2px solid #24405a;
+  border-radius: 6px;
+}
+
+.fam-consentimiento input[type='checkbox'] {
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-top: 0.15rem;
+  accent-color: #1d4160;
+}
+
+.fam-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.fam-quitar {
+  padding: 1rem 1.1rem;
+  background: #f8d7d7;
+  border-left: 6px solid #a62d2d;
+  border-radius: 6px;
+}
+
+.fam-ayuda,
+.fam-vacio {
+  color: #1f3a52;
+}
+
+.fam-avisos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.fam-aviso {
+  padding: 0.8rem 1rem;
+  background: #fff;
+  border-left: 6px solid #2f6fd0;
+  border-radius: 6px;
+}
+
+.fam-aviso p {
+  margin: 0 0 0.3rem;
+}
+
+.fam-aviso-meta {
+  font-family: var(--f-mono);
+  font-size: 0.95rem;
+  color: #35536b;
+}
+
+.fam-aviso-asunto {
+  font-weight: 700;
+}
+
+.fam-aviso-texto {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

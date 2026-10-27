@@ -8,6 +8,7 @@ import SolicitarTurno from './pages/SolicitarTurno';
 import MedicoRecetas from './pages/MedicoRecetas';
 import AdminTurnos from './pages/AdminTurnos';
 import Accesibilidad from './pages/Accesibilidad';
+import PacienteFamiliar from './pages/PacienteFamiliar';
 import { AccesibilidadProvider } from './context/AccesibilidadContext';
 
 const soloPaciente = (pagina) => <ProtectedRoute allowedRoles={['paciente']}>{pagina}</ProtectedRoute>;
@@ -22,6 +23,7 @@ function App() {
           <Route path="/paciente" element={soloPaciente(<PacienteInicio />)} />
           <Route path="/paciente/turnos" element={soloPaciente(<MisTurnos />)} />
           <Route path="/paciente/turnos/nuevo" element={soloPaciente(<SolicitarTurno />)} />
+          <Route path="/paciente/familiar" element={soloPaciente(<PacienteFamiliar />)} />
           <Route path="/medico" element={<ProtectedRoute allowedRoles={['medico']}><MedicoRecetas /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['administrativo']}><AdminTurnos /></ProtectedRoute>} />
           <Route path="/accesibilidad" element={<ProtectedRoute><Accesibilidad /></ProtectedRoute>} />
