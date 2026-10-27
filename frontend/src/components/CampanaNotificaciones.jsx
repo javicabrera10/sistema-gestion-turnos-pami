@@ -10,6 +10,7 @@ const ICONOS = {
   turno_confirmado: '✅',
   turno_rechazado: '🚫',
   recordatorio: '⏰',
+  toma_medicacion: '💊',
 };
 const CADA_MS = 60000; // se vuelve a consultar cada minuto
 
