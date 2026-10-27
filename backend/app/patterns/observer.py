@@ -22,6 +22,9 @@ RECETA_EMITIDA = "receta.emitida"
 TURNO_REPROGRAMADO = "turno.reprogramado"
 TURNO_CANCELADO = "turno.cancelado"
 
+# Eventos del Sprint 3: el sistema recuerda un turno próximo (lo publica el servicio de recordatorios)
+TURNO_RECORDATORIO = "turno.recordatorio"
+
 
 class EventBus:
     def __init__(self):

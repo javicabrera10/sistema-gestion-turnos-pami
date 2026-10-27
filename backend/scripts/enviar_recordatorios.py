@@ -19,7 +19,7 @@ from app.services.toma_service import crear_servicio_tomas  # noqa: E402
 
 def main():
     app = create_app()
-    creados = crear_servicio(app.db).procesar()
+    creados = crear_servicio(app.db, app.event_bus).procesar()
     tomas = crear_servicio_tomas(app.db).procesar()
     print(f"Recordatorios creados: {creados}")
     print(f"Avisos de toma creados: {tomas}")

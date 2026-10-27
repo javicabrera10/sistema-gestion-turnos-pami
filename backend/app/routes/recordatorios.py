@@ -21,6 +21,6 @@ def ejecutar_recordatorios():
       403:
         description: El rol no tiene permiso
     """
-    turnos = crear_servicio(current_app.db).procesar()
+    turnos = crear_servicio(current_app.db, current_app.event_bus).procesar()
     tomas = crear_servicio_tomas(current_app.db).procesar()
     return jsonify(enviados=turnos, tomas=tomas)
