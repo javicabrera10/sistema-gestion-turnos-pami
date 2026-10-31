@@ -83,3 +83,31 @@ def test_recordatorio_avisa_al_paciente_el_dia_y_la_hora(service):
     notif = service.listar_mias("p1")[0]
     assert notif["tipo"] == "recordatorio"
     assert notif["mensaje"] == "Recordatorio: tenés un turno de Cardiología el 05/11/2099 a las 10:30 hs."
+
+
+def test_receta_emitida_le_avisa_al_administrativo_sin_datos_de_salud(service):
+    service.crear_receta_emitida("a1", {"receta_id": "r1"}, medico_nombre="Martín Médico", paciente_nombre="Paula Paciente")
+
+    notif = service.listar_mias("a1")[0]
+    assert notif["tipo"] == "receta_emitida"
+    assert notif["receta_id"] == "r1"
+    assert notif["leida"] is False
+    assert notif["mensaje"].startswith("Martín Médico emitió una receta con plan de medicación para Paula Paciente.")
+    assert "Generar recordatorios" in notif["mensaje"]
+    assert "turno_id" not in notif  # no es un aviso de turno
+
+
+def test_receta_emitida_funciona_sin_nombres(service):
+    service.crear_receta_emitida("a1", {"receta_id": "r1"})
+    assert service.listar_mias("a1")[0]["mensaje"].startswith("Un médico emitió una receta con plan de medicación para un paciente.")
+
+
+def test_resolver_receta_emitida_solo_marca_los_avisos_de_esa_receta(service):
+    service.crear_receta_emitida("a1", {"receta_id": "r1"})
+    service.crear_receta_emitida("a2", {"receta_id": "r1"})
+    service.crear_receta_emitida("a1", {"receta_id": "r2"})
+
+    service.resolver_receta_emitida("r1")
+
+    assert [n["leida"] for n in service.listar_mias("a1")] == [False, True]  # la más nueva (r2) primero
+    assert service.listar_mias("a2")[0]["leida"] is True

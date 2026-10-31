@@ -54,7 +54,8 @@ Todos están documentados y se pueden probar en Swagger (`/apidocs`). Salvo logi
 | `PUT /api/recetas/<id>` · `DELETE /api/recetas/<id>` | médico autor | Edita o elimina, también si ya se emitió |
 | `POST /api/recetas/<id>/emitir` | médico autor | Pasa a `emitida`: desde ahí la ve el paciente |
 | `PUT /api/recetas/<id>/plan` | médico autor | Plan de medicación: medicamento, dosis, horarios y duración en días |
-| `GET /api/recetas/mias` | paciente | Solo lo que el médico ya emitió |
+| `GET /api/recetas/mias` | paciente | Solo lo que el médico ya emitió (una receta con plan, desde que el administrativo genera el recordatorio) |
+| `GET /api/recetas/emitidas` | administrativo | Recetas y órdenes emitidas con los datos del paciente y del médico, sin medicamentos ni indicaciones |
 
 Flujo del turno: `solicitado → otorgado → confirmado | rechazado`.
 
@@ -70,7 +71,7 @@ El `EventBus` se crea una vez en `create_app` (`app.event_bus`). Los services pu
 | `turno.solicitado` | `TurnoService.solicitar` | — |
 | `turno.otorgado` | `TurnoAdminService.otorgar` | Crea la notificación al paciente |
 | `turno.confirmado` · `turno.rechazado` | `TurnoService` | — |
-| `receta.emitida` | `RecetaService.emitir` | — |
+| `receta.emitida` | `RecetaService.emitir` | Avisa a los administrativos cuando la receta trae plan de medicación; el paciente recibe su receta y el plan de toma cuando un administrativo toca «Generar recordatorios» |
 
 Un observer que falla se registra en el log y no corta la operación principal.
 

@@ -100,8 +100,23 @@ def test_emitir_cambia_el_estado_y_publica_el_evento(entorno):
 
     assert emitida["estado"] == "emitida"
     assert entorno.eventos == [
-        {"receta_id": str(receta["_id"]), "paciente_id": entorno.paciente, "medico_id": entorno.medico, "tipo": "receta"}
+        {
+            "receta_id": str(receta["_id"]),
+            "paciente_id": entorno.paciente,
+            "medico_id": entorno.medico,
+            "tipo": "receta",
+            "con_plan": False,
+        }
     ]
+
+
+def test_el_evento_de_emitir_avisa_si_la_receta_tiene_plan_de_medicacion(entorno):
+    receta = entorno.service.crear(entorno.medico, _receta(entorno.paciente))
+    entorno.service.registrar_plan(str(receta["_id"]), entorno.medico, PlanSchema.model_validate(PLAN))
+
+    entorno.service.emitir(str(receta["_id"]), entorno.medico)
+
+    assert entorno.eventos[0]["con_plan"] is True
 
 
 def test_no_se_puede_emitir_dos_veces(entorno):

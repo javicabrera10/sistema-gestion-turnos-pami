@@ -155,7 +155,7 @@ def test_el_script_crea_los_recordatorios_e_informa_cuantos(app, crear_turno, mo
     enviar_recordatorios.main()
     salida = capsys.readouterr().out
     assert "Recordatorios creados: 1" in salida
-    assert "Avisos de toma creados: 0" in salida
+    assert "toma" not in salida  # la receta del paciente la genera el administrativo, no el script
 
     enviar_recordatorios.main()
     assert "Recordatorios creados: 0" in capsys.readouterr().out

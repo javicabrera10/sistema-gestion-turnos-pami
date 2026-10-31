@@ -56,8 +56,20 @@ class RecetaService:
         return self.repo.listar_por_medico(medico_id)
 
     def listar_del_paciente(self, paciente_id: str) -> list[dict]:
-        """El paciente solo ve lo que el médico ya emitió, nunca los borradores."""
+        """El paciente solo ve lo que el médico ya emitió, nunca los borradores.
+
+        Una receta con plan de medicación se le muestra recién cuando el administrativo genera el recordatorio.
+        """
         return self.repo.listar_por_paciente(paciente_id, solo_emitidas=True)
+
+    def listar_emitidas_con_paciente(self) -> list[dict]:
+        """Recetas y órdenes emitidas con el paciente y el médico de cada una (vista del administrativo)."""
+        recetas = self.repo.listar_emitidas()
+        ids = list({r[campo] for r in recetas for campo in ("paciente_id", "medico_id")})
+        personas = {str(u["_id"]): u for u in self.usuarios.buscar_por_ids(ids)} if ids else {}
+        return [
+            {**r, "paciente": personas.get(r["paciente_id"]), "medico": personas.get(r["medico_id"])} for r in recetas
+        ]
 
     def editar(self, receta_id: str, medico_id: str, datos) -> dict:
         receta = self._receta_del_medico(receta_id, medico_id)
@@ -94,6 +106,8 @@ class RecetaService:
                     "paciente_id": receta["paciente_id"],
                     "medico_id": medico_id,
                     "tipo": receta["tipo"],
+                    # los observers deciden con esto si hay un plan de medicación para recordar
+                    "con_plan": bool(receta.get("plan_medicacion")),
                 },
             )
         return emitida

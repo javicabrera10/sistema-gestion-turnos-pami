@@ -14,7 +14,8 @@ TIPO_TURNO_CANCELADO = "turno_cancelado"
 TIPO_TURNO_CONFIRMADO = "turno_confirmado"
 TIPO_TURNO_RECHAZADO = "turno_rechazado"
 TIPO_RECORDATORIO = "recordatorio"
-TIPO_TOMA_MEDICACION = "toma_medicacion"
+TIPO_TOMA_MEDICACION = "toma_medicacion"  # al paciente: su receta y el plan de toma (lo genera el administrativo)
+TIPO_RECETA_EMITIDA = "receta_emitida"  # al administrativo: hay una receta con plan para generar el recordatorio
 
 
 @dataclass
@@ -23,7 +24,7 @@ class Notificacion:
     mensaje: str
     tipo: str = TIPO_TURNO_OTORGADO
     turno_id: str | None = None  # los avisos de turnos lo llevan
-    receta_id: str | None = None  # los avisos de toma de medicación lo llevan
+    receta_id: str | None = None  # los avisos de toma de medicación y de receta emitida lo llevan
     leida: bool = False
     creada_en: datetime = field(default_factory=_ahora)
     id: str | None = None

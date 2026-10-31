@@ -12,7 +12,7 @@ El backend (Flask + MongoDB) usa cinco patrones de diseño. Para cada uno se ind
 
 ## 1. Repository
 
-**Dónde.** Una clase por colección en `backend/app/repositories/`: `TurnoRepository`, `UsuarioRepository`, `RecetaRepository`, `NotificacionRepository`, `AvisoTomaRepository`, `FamiliarRepository` y `MensajeFamiliarRepository`, todas sobre `BaseRepository`. Los servicios (`backend/app/services/`) reciben el repositorio por parámetro y nunca escriben una consulta de MongoDB.
+**Dónde.** Una clase por colección en `backend/app/repositories/`: `TurnoRepository`, `UsuarioRepository`, `RecetaRepository`, `NotificacionRepository`, `FamiliarRepository` y `MensajeFamiliarRepository`, todas sobre `BaseRepository`. Los servicios (`backend/app/services/`) reciben el repositorio por parámetro y nunca escriben una consulta de MongoDB.
 
 ```python
 class TurnoService:
@@ -26,7 +26,7 @@ class TurnoService:
 - Las consultas quedan en un solo lugar. Por ejemplo, `TurnoRepository.horario_ocupado` y `listar_confirmados_entre` se escriben una vez y se usan desde varios servicios.
 - Los repositorios de turnos, recetas y notificaciones traducen los errores de la base: un id mal formado en la URL devuelve "no existe" (`InvalidId` se convierte en `None`) en lugar de un error 500.
 - Las pruebas unitarias usan `mongomock` a través de los mismos repositorios, sin levantar MongoDB.
-- El repositorio también esconde detalles de la base: `AvisoTomaRepository.registrar` devuelve `False` si el aviso de toma ya existía (lo garantiza un índice único), y el servicio de tomas no sabe cómo.
+- El repositorio también esconde detalles de la base: `RecetaRepository.reclamar_recordatorio` devuelve `False` si otro administrativo ya había generado el aviso de esa receta (es una sola actualización con condición), y el servicio de tomas no sabe cómo.
 
 **Pruebas.** `tests/unit/test_turno_repository.py` y todos los tests de servicios.
 
@@ -41,6 +41,7 @@ class TurnoService:
 | `turno.cancelado` | `TurnoAdminService.cancelar` | Avisa al paciente que se canceló, y al familiar autorizado |
 | `turno.confirmado` / `turno.rechazado` | `TurnoService` | Avisa al administrativo que otorgó el turno qué respondió el paciente; si confirmó, también al familiar autorizado |
 | `turno.recordatorio` | `RecordatorioService.procesar` | Avisa al familiar autorizado que se acerca el turno |
+| `receta.emitida` | `RecetaService.emitir` | Avisa a los administrativos que hay una receta con plan de medicación, para que toquen «Generar recordatorios» (no avisa por órdenes ni por recetas sin plan) |
 
 ```python
 # el servicio solo cuenta lo que pasó
@@ -49,6 +50,8 @@ self.bus.publicar(TURNO_CANCELADO, datos_evento(turno))
 # y en otro lugar se decide qué hacer cuando pasa
 bus.suscribir(TURNO_CANCELADO, notificar_turno_cancelado)
 ```
+
+El observer `notificar_receta_emitida` también se sumó sin tocar el código de recetas: el evento `receta.emitida` ya se publicaba y solo se le agregó el dato `con_plan`. Después, cuando el administrativo toca «Generar recordatorios», el paciente recibe una sola vez su receta con el plan de toma (no un aviso a cada horario) y el aviso pendiente de los administrativos se marca como leído.
 
 En el Sprint 3 se sumó el observer `avisar_al_familiar`, suscrito a cinco eventos (`EVENTOS_PARA_FAMILIAR`). Se agregó sin modificar ninguno de los servicios que publican esos eventos: solo `RecordatorioService` pasó a publicar `turno.recordatorio`.
 

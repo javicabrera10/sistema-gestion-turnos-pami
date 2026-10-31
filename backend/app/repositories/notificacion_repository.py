@@ -25,3 +25,7 @@ class NotificacionRepository(BaseRepository):
 
     def marcar_leida(self, id_) -> None:
         self.update(id_, {"leida": True})
+
+    def marcar_leidas_de_receta(self, receta_id: str, tipo: str) -> None:
+        """Marca como leídos los avisos de un tipo que hablan de una receta (de todos los destinatarios)."""
+        self.col.update_many({"receta_id": receta_id, "tipo": tipo, "leida": False}, {"$set": {"leida": True}})

@@ -45,6 +45,10 @@ export default function PacienteInicio() {
             <span className="pac-icono" aria-hidden="true">🩺</span>
             <span><strong>Mis turnos</strong><small>Mirá tus turnos y respondé si los aceptás</small></span>
           </Link>
+          <Link to="/paciente/recetas" className="pac-opcion">
+            <span className="pac-icono" aria-hidden="true">💊</span>
+            <span><strong>Mis recetas y estudios</strong><small>Mirá tus recetas, tus pedidos de estudios y cuándo tomar cada medicamento</small></span>
+          </Link>
           <Link to="/paciente/familiar" className="pac-opcion">
             <span className="pac-icono" aria-hidden="true">👪</span>
             <span><strong>Mi familiar autorizado</strong><small>Elegí a quién avisarle de tus turnos</small></span>

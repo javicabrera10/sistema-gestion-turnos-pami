@@ -33,6 +33,18 @@ const ETIQUETA = {
   cancelado: 'Cancelado',
 };
 
+const SECCIONES = [
+  { id: 'turnos', label: 'Turnos' },
+  { id: 'recetas', label: 'Recetas emitidas' },
+];
+
+// Estado del recordatorio de una receta emitida: las órdenes y las recetas sin plan no tienen recordatorio que generar
+function estadoRecordatorio(receta) {
+  if (!receta.con_plan) return { clase: 'cancelado', texto: 'Sin plan de toma' };
+  if (receta.recordatorio_generado_en) return { clase: 'confirmado', texto: 'Recordatorio generado' };
+  return { clase: 'solicitado', texto: 'Recordatorio pendiente' };
+}
+
 const quitarTildes = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const dos = (n) => String(n).padStart(2, '0');
 
@@ -193,6 +205,8 @@ export default function AdminTurnos() {
   const { user, logout } = useAuth();
   const [turnos, setTurnos] = useState([]);
   const [medicos, setMedicos] = useState([]);
+  const [recetas, setRecetas] = useState([]);
+  const [seccion, setSeccion] = useState('turnos');
   const [filtro, setFiltro] = useState('solicitado');
   const [abierto, setAbierto] = useState(null);
   const [accion, setAccion] = useState(null); // { id, tipo: 'reprogramar' | 'cancelar' }
@@ -206,9 +220,14 @@ export default function AdminTurnos() {
     setCargando(true);
     setError('');
     try {
-      const [ts, us] = await Promise.all([api.get('/turnos'), api.get('/medicos').catch(() => [])]);
+      const [ts, us, rs] = await Promise.all([
+        api.get('/turnos'),
+        api.get('/medicos').catch(() => []),
+        api.get('/recetas/emitidas').catch(() => []),
+      ]);
       setTurnos(ts);
       setMedicos(us); // GET /api/medicos ya devuelve solo médicos: id, nombre y especialidad
+      setRecetas(rs);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -221,10 +240,15 @@ export default function AdminTurnos() {
     let activo = true;
     const cargarInicial = async () => {
       try {
-        const [ts, us] = await Promise.all([api.get('/turnos'), api.get('/medicos').catch(() => [])]);
+        const [ts, us, rs] = await Promise.all([
+          api.get('/turnos'),
+          api.get('/medicos').catch(() => []),
+          api.get('/recetas/emitidas').catch(() => []),
+        ]);
         if (!activo) return;
         setTurnos(ts);
         setMedicos(us);
+        setRecetas(rs);
       } catch (e) {
         if (activo) setError(e.message);
       } finally {
@@ -250,7 +274,7 @@ export default function AdminTurnos() {
     cargar();
   };
 
-  // Crea los recordatorios de turnos y los avisos de toma de medicación (POST /api/recordatorios/ejecutar)
+  // Crea los recordatorios de turnos y le entrega a cada paciente su receta con el plan de toma (POST /api/recordatorios/ejecutar)
   const generarRecordatorios = async () => {
     setGenerando(true);
     setError('');
@@ -259,7 +283,9 @@ export default function AdminTurnos() {
       const { enviados = 0, tomas = 0 } = await api.post('/recordatorios/ejecutar');
       const partes = [];
       if (enviados > 0) partes.push(enviados === 1 ? '1 recordatorio de turno' : `${enviados} recordatorios de turno`);
-      if (tomas > 0) partes.push(tomas === 1 ? '1 aviso de toma de medicación' : `${tomas} avisos de toma de medicación`);
+      if (tomas > 0) partes.push(tomas === 1 ? '1 receta con plan de toma' : `${tomas} recetas con plan de toma`);
+      // las recetas entregadas pasan a "Recordatorio generado"; si la lista no se puede refrescar, queda la anterior
+      api.get('/recetas/emitidas').then(setRecetas).catch(() => {});
       setExito(
         partes.length === 0
           ? 'No hay recordatorios nuevos para enviar.'
@@ -296,10 +322,25 @@ export default function AdminTurnos() {
       </header>
 
       <main className="adm-contenido">
-        <h1>Solicitudes de turnos</h1>
-        <p className="adm-sub">Revisá los pedidos de los pacientes y otorgá fecha, hora y médico.</p>
+        <h1>Turnos y recetas</h1>
+        <p className="adm-sub">Otorgá los turnos que piden los pacientes y revisá las recetas que emitieron los médicos.</p>
 
-        <section className="adm-resumen" aria-label="Resumen por estado">
+        <div className="adm-filtros" role="tablist" aria-label="Sección">
+          {SECCIONES.map((sec) => (
+            <button
+              key={sec.id}
+              type="button"
+              role="tab"
+              aria-selected={seccion === sec.id}
+              className={`adm-filtro${seccion === sec.id ? ' adm-filtro--activo' : ''}`}
+              onClick={() => setSeccion(sec.id)}
+            >
+              {sec.id === 'recetas' ? `${sec.label} (${recetas.length})` : sec.label}
+            </button>
+          ))}
+        </div>
+
+        {seccion === 'turnos' && <section className="adm-resumen" aria-label="Resumen por estado">
           {RESUMEN.map((r) => (
             <button
               key={r.id}
@@ -312,9 +353,9 @@ export default function AdminTurnos() {
               <span className="adm-tarjeta-ayuda">{r.ayuda}</span>
             </button>
           ))}
-        </section>
+        </section>}
 
-        <div className="adm-filtros" role="tablist" aria-label="Filtrar por estado">
+        {seccion === 'turnos' && <div className="adm-filtros" role="tablist" aria-label="Filtrar por estado">
           {FILTROS.map((f) => (
             <button
               key={f.id}
@@ -333,19 +374,67 @@ export default function AdminTurnos() {
           <button type="button" className="adm-boton adm-actualizar" onClick={cargar} disabled={cargando}>
             ↻ Actualizar
           </button>
-        </div>
+        </div>}
+
+        {seccion === 'recetas' && (
+          <div className="adm-filtros">
+            <button type="button" className="adm-boton adm-actualizar" onClick={generarRecordatorios} disabled={generando}>
+              {generando ? 'Generando…' : '⏰ Generar recordatorios'}
+            </button>
+            <button type="button" className="adm-boton adm-actualizar" onClick={cargar} disabled={cargando}>
+              ↻ Actualizar
+            </button>
+          </div>
+        )}
 
         {exito && <p className="adm-exito" role="status">{exito}</p>}
         {error && <p className="adm-error" role="alert">{error}</p>}
         {cargando && <p className="adm-aviso">Cargando solicitudes…</p>}
-        {!cargando && !error && visibles.length === 0 && (
+        {seccion === 'recetas' && !cargando && !error && recetas.length === 0 && (
+          <div className="adm-vacio">
+            <span aria-hidden="true">📭</span>
+            <p>Los médicos todavía no emitieron recetas.</p>
+          </div>
+        )}
+        {seccion === 'turnos' && !cargando && !error && visibles.length === 0 && (
           <div className="adm-vacio">
             <span aria-hidden="true">📭</span>
             <p>No hay turnos en esta categoría.</p>
           </div>
         )}
 
-        <ul className="adm-lista">
+        {seccion === 'recetas' && (
+          <ul className="adm-lista" aria-label="Recetas emitidas">
+            {recetas.map((r) => {
+              const estado = estadoRecordatorio(r);
+              return (
+                <li key={r.id} className="adm-turno">
+                  <div className="adm-turno-cabecera">
+                    <span className="adm-avatar" aria-hidden="true">{iniciales(r.paciente?.nombre)}</span>
+                    <div className="adm-turno-paciente">
+                      <strong>{r.paciente?.nombre || 'Paciente'}</strong>
+                      <span>
+                        {r.paciente?.dni ? `DNI ${r.paciente.dni}` : 'Sin DNI'}
+                        {r.paciente?.telefono ? ` · Tel. ${r.paciente.telefono}` : ''}
+                      </span>
+                    </div>
+                    <span className={`adm-badge adm-badge--${estado.clase}`}>{estado.texto}</span>
+                  </div>
+                  <dl className="adm-datos">
+                    <div><dt>Documento</dt><dd>{r.tipo === 'orden' ? 'Orden' : 'Receta'}</dd></div>
+                    <div><dt>Emitida</dt><dd>{formatearFecha(r.fecha)}</dd></div>
+                    <div>
+                      <dt>Médico</dt>
+                      <dd>{r.medico ? `${r.medico.nombre}${r.medico.especialidad ? ` · ${r.medico.especialidad}` : ''}` : 'Sin datos'}</dd>
+                    </div>
+                  </dl>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {seccion === 'turnos' && <ul className="adm-lista">
           {visibles.map((t) => (
             <li key={t.id} className="adm-turno">
               <div className="adm-turno-cabecera">
@@ -394,7 +483,7 @@ export default function AdminTurnos() {
               )}
             </li>
           ))}
-        </ul>
+        </ul>}
       </main>
     </div>
   );

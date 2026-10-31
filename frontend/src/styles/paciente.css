@@ -509,3 +509,15 @@ body:has(.pac)::after {
   background: #ffe3a3;
   border-color: #b87800;
 }
+
+/* Mis recetas y estudios */
+.pac-receta-titulo {
+  margin: 1rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.pac-receta-items {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.6;
+}

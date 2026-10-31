@@ -49,7 +49,7 @@ describe('MedicoRecetas: plan de medicación', () => {
     poner('Duración (días)', '7');
     await user.click(screen.getByRole('button', { name: 'Emitir receta al paciente' }));
 
-    expect(await screen.findByText(/Receta emitida al paciente\. El paciente va a recibir un aviso a cada horario de toma\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Receta emitida al paciente\. El administrativo va a generar el recordatorio de toma para el paciente\./)).toBeInTheDocument();
     expect(api.post).toHaveBeenNthCalledWith(1, '/recetas', expect.objectContaining({ paciente_id: 'p1', tipo: 'receta' }));
     expect(api.put).toHaveBeenCalledWith('/recetas/r1/plan', {
       plan: [{ medicamento: 'Ibuprofeno', dosis: '400 mg', horarios: ['00:00', '08:00', '16:00'], duracion_dias: 7 }],
