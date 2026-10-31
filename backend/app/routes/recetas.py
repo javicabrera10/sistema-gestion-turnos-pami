@@ -13,7 +13,7 @@ from app.services.receta_service import (
     RecetaService,
     RecetaYaEmitida,
 )
-from app.utils.serializers import serializar_receta
+from app.utils.serializers import serializar_receta, serializar_receta_para_administrativo
 
 recetas_bp = Blueprint("recetas", __name__)
 
@@ -109,7 +109,7 @@ def mis_recetas():
     tags: [Recetas]
     responses:
       200:
-        description: Solo documentos emitidos (nunca borradores)
+        description: Solo documentos emitidos (nunca borradores); una receta con plan de medicación aparece cuando el administrativo genera el recordatorio
       401:
         description: Falta el token
       403:
@@ -118,6 +118,25 @@ def mis_recetas():
     recetas = _service().listar_del_paciente(get_jwt_identity())
     registrar_acceso("recetas_del_paciente")
     return jsonify([serializar_receta(r) for r in recetas])
+
+
+@recetas_bp.get("/emitidas")
+@roles_required("administrativo")
+def recetas_emitidas():
+    """Recetas y órdenes que emitieron los médicos, con los datos del paciente (solo administrativo)
+    ---
+    tags: [Recetas]
+    responses:
+      200:
+        description: Documentos emitidos, los más recientes primero. Lleva paciente, médico y si ya se generó el recordatorio, sin medicamentos ni indicaciones
+      401:
+        description: Falta el token
+      403:
+        description: El rol no tiene permiso
+    """
+    recetas = _service().listar_emitidas_con_paciente()
+    registrar_acceso("recetas_emitidas")
+    return jsonify([serializar_receta_para_administrativo(r) for r in recetas])
 
 
 @recetas_bp.put("/<receta_id>")

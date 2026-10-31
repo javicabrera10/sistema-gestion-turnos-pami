@@ -10,7 +10,8 @@ const ICONOS = {
   turno_confirmado: '✅',
   turno_rechazado: '🚫',
   recordatorio: '⏰',
-  toma_medicacion: '💊',
+  toma_medicacion: '💊', // al paciente: su receta con el plan de toma
+  receta_emitida: '📝', // al administrativo: hay una receta para generar el recordatorio
 };
 const CADA_MS = 60000; // se vuelve a consultar cada minuto
 

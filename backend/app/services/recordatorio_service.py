@@ -22,11 +22,6 @@ def ahora_local() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None) + _diferencia_horaria()
 
 
-def a_hora_local(fecha_utc: datetime) -> datetime:
-    """Pasa una fecha guardada en UTC (creado_en, inicio_plan...) a la hora local."""
-    return fecha_utc + _diferencia_horaria()
-
-
 class RecordatorioService:
     """Crea un aviso para el paciente cuando se acerca un turno confirmado, según las reglas (Strategy)."""
 

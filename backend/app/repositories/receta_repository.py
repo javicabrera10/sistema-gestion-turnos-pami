@@ -1,3 +1,4 @@
+from bson import ObjectId
 from bson.errors import InvalidId
 
 from app.models.receta import EstadoReceta, TipoReceta
@@ -26,17 +27,37 @@ class RecetaRepository(BaseRepository):
         filtro = {"paciente_id": paciente_id}
         if solo_emitidas:
             filtro["estado"] = EstadoReceta.EMITIDA.value
+            # una receta con plan de medicación llega al paciente recién cuando el administrativo genera el recordatorio
+            filtro["$or"] = [
+                {"plan_medicacion": {"$exists": False}},
+                {"plan_medicacion": []},
+                {"recordatorio_generado_en": {"$ne": None}},
+            ]
         return list(self.col.find(filtro).sort("fecha", -1))
 
-    def listar_con_plan_activo(self):
-        """Recetas emitidas con plan de medicación cargado y con inicio (lo que necesita el aviso de toma)."""
+    def listar_emitidas(self):
+        """Todo lo que los médicos ya emitieron (recetas y órdenes), lo más reciente primero."""
+        return list(self.col.find({"estado": EstadoReceta.EMITIDA.value}).sort("fecha", -1))
+
+    def listar_pendientes_de_recordatorio(self):
+        """Recetas emitidas con plan de medicación cuyo aviso al paciente todavía no generó el administrativo."""
         filtro = {
             "tipo": TipoReceta.RECETA.value,
             "estado": EstadoReceta.EMITIDA.value,
             "plan_medicacion": {"$exists": True, "$ne": []},
-            "inicio_plan": {"$ne": None},
+            "recordatorio_generado_en": None,  # también coincide con las recetas que no tienen el campo
         }
         return list(self.col.find(filtro))
+
+    def reclamar_recordatorio(self, id_, cuando) -> bool:
+        """Anota que se generó el aviso. Devuelve False si otro administrativo ya lo había generado.
+
+        Es una sola actualización con condición, así que dos administrativos tocando el botón a la vez no duplican el aviso.
+        """
+        resultado = self.col.update_one(
+            {"_id": ObjectId(id_), "recordatorio_generado_en": None}, {"$set": {"recordatorio_generado_en": cuando}}
+        )
+        return resultado.modified_count == 1
 
     def actualizar(self, id_, campos: dict) -> None:
         self.update(id_, campos)

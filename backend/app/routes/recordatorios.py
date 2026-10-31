@@ -10,12 +10,12 @@ recordatorios_bp = Blueprint("recordatorios", __name__)
 @recordatorios_bp.post("/ejecutar")
 @roles_required("administrativo")
 def ejecutar_recordatorios():
-    """Crea los recordatorios de turnos y los avisos de toma de medicación que corresponden ahora (solo administrativo)
+    """Crea los recordatorios de turnos y entrega a los pacientes sus recetas con el plan de toma (solo administrativo)
     ---
     tags: [Recordatorios]
     responses:
       200:
-        description: Cantidad creada en esta ejecución, enviados son recordatorios de turnos y tomas son avisos de medicación (0 si no hay nada nuevo)
+        description: Cantidad creada en esta ejecución, enviados son recordatorios de turnos y tomas son recetas con plan entregadas al paciente (0 si no hay nada nuevo)
       401:
         description: Falta el token
       403:

@@ -2,6 +2,7 @@ import logging
 from dataclasses import asdict
 
 from app.models.notificacion import (
+    TIPO_RECETA_EMITIDA,
     TIPO_RECORDATORIO,
     TIPO_TOMA_MEDICACION,
     TIPO_TURNO_CANCELADO,
@@ -77,9 +78,33 @@ class NotificacionService:
         return self._crear(datos["paciente_id"], datos["turno_id"], TIPO_RECORDATORIO, mensaje)
 
     def crear_toma_medicacion(self, datos: dict) -> str:
-        """Le avisa al paciente que es hora de tomar un medicamento de su plan (lo genera el servicio de tomas)."""
-        mensaje = f"Es hora de tomar {datos['medicamento']} ({datos['dosis']}) a las {datos['horario']} hs."
+        """Le entrega al paciente su receta con el plan de toma (la genera el servicio de tomas cuando el administrativo toca el botón)."""
+        lineas = []
+        for item in datos["plan"]:
+            dias = item["duracion_dias"]
+            horarios = ", ".join(item["horarios"])
+            lineas.append(f"{item['medicamento']} ({item['dosis']}) a las {horarios} hs durante {dias} {'día' if dias == 1 else 'días'}")
+        mensaje = f"Tu médico te emitió una receta. Plan de toma: {'; '.join(lineas)}."
+        if datos.get("indicaciones"):
+            mensaje += f" Indicaciones: {datos['indicaciones']}"
         return self._crear(datos["paciente_id"], None, TIPO_TOMA_MEDICACION, mensaje, receta_id=datos["receta_id"])
+
+    def crear_receta_emitida(self, administrativo_id: str, datos: dict, medico_nombre: str | None = None, paciente_nombre: str | None = None) -> str:
+        """Le avisa a un administrativo que el médico emitió una receta con plan de medicación (observer de receta.emitida).
+
+        No lleva medicamentos ni dosis: son datos de salud y al administrativo le alcanza con saber de qué paciente se trata.
+        """
+        quien = medico_nombre or "Un médico"
+        para = paciente_nombre or "un paciente"
+        mensaje = (
+            f"{quien} emitió una receta con plan de medicación para {para}. "
+            "Tocá «Generar recordatorios» para que el paciente reciba su receta y el aviso de toma."
+        )
+        return self._crear(administrativo_id, None, TIPO_RECETA_EMITIDA, mensaje, receta_id=datos["receta_id"])
+
+    def resolver_receta_emitida(self, receta_id: str) -> None:
+        """Ya se generó el recordatorio de esa receta: el aviso pendiente de los administrativos se marca como leído."""
+        self.repo.marcar_leidas_de_receta(receta_id, TIPO_RECETA_EMITIDA)
 
     def listar_mias(self, destinatario_id: str) -> list[dict]:
         return self.repo.listar_por_destinatario(destinatario_id)

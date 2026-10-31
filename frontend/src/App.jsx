@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import PacienteInicio from './pages/PacienteInicio';
 import MisTurnos from './pages/MisTurnos';
 import SolicitarTurno from './pages/SolicitarTurno';
+import MisRecetas from './pages/MisRecetas';
 import MedicoRecetas from './pages/MedicoRecetas';
 import AdminTurnos from './pages/AdminTurnos';
 import Accesibilidad from './pages/Accesibilidad';
@@ -23,6 +24,7 @@ function App() {
           <Route path="/paciente" element={soloPaciente(<PacienteInicio />)} />
           <Route path="/paciente/turnos" element={soloPaciente(<MisTurnos />)} />
           <Route path="/paciente/turnos/nuevo" element={soloPaciente(<SolicitarTurno />)} />
+          <Route path="/paciente/recetas" element={soloPaciente(<MisRecetas />)} />
           <Route path="/paciente/familiar" element={soloPaciente(<PacienteFamiliar />)} />
           <Route path="/medico" element={<ProtectedRoute allowedRoles={['medico']}><MedicoRecetas /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['administrativo']}><AdminTurnos /></ProtectedRoute>} />

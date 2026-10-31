@@ -133,7 +133,7 @@ export default function MedicoRecetas() {
       }
       if (emitir) await api.post(`/recetas/${creada.id}/emitir`);
       setHistorial((h) => [{ id: creada.id, tipo, nombre, emitida: emitir, conPlan: plan.length > 0 }, ...h]);
-      const avisoToma = plan.length > 0 && emitir ? ' El paciente va a recibir un aviso a cada horario de toma.' : '';
+      const avisoToma = plan.length > 0 && emitir ? ' El administrativo va a generar el recordatorio de toma para el paciente.' : '';
       setResultado({ ok: true, texto: `${tipo === 'receta' ? 'Receta' : 'Orden'} ${emitir ? 'emitida al paciente' : 'guardada como borrador'}.${avisoToma}` });
       limpiar();
     } catch (e) {
@@ -206,7 +206,7 @@ export default function MedicoRecetas() {
                   </div>
                   <div className="rec-plan">
                     <p className="rec-plan-titulo">Aviso de toma al paciente <span>(opcional)</span></p>
-                    <p className="rec-plan-ayuda">Si cargás los horarios y los días, el paciente recibe un aviso a cada hora, desde que emitís la receta.</p>
+                    <p className="rec-plan-ayuda">Si cargás los horarios y los días, cuando emitís la receta le llega un aviso al administrativo y él genera el recordatorio para el paciente.</p>
                     <div className="rec-plan-campos">
                       <label>
                         Duración (días)

@@ -8,7 +8,7 @@ import CampanaNotificaciones from './CampanaNotificaciones';
 vi.mock('../services/api', () => ({ api: { get: vi.fn(), patch: vi.fn() } }));
 
 const AVISOS = [
-  { id: 'n1', tipo: 'toma_medicacion', mensaje: 'Es hora de tomar Ibuprofeno (400 mg) a las 08:00 hs.', leida: false, creada_en: '2026-10-26T11:00:00' },
+  { id: 'n1', tipo: 'toma_medicacion', mensaje: 'Tu médico te emitió una receta. Plan de toma: Ibuprofeno (400 mg) a las 08:00 hs durante 5 días.', leida: false, creada_en: '2026-10-26T11:00:00' },
   { id: 'n2', tipo: 'turno_cancelado', mensaje: 'Cancelaron tu turno de Cardiología.', leida: true, creada_en: '2026-10-25T14:00:00' },
 ];
 
@@ -32,10 +32,29 @@ describe('CampanaNotificaciones', () => {
 
     await user.click(await screen.findByRole('button', { name: /Avisos/ }));
 
-    expect(screen.getByText('Es hora de tomar Ibuprofeno (400 mg) a las 08:00 hs.')).toBeInTheDocument();
+    expect(screen.getByText('Tu médico te emitió una receta. Plan de toma: Ibuprofeno (400 mg) a las 08:00 hs durante 5 días.')).toBeInTheDocument();
     expect(screen.getByText('Cancelaron tu turno de Cardiología.')).toBeInTheDocument();
-    expect(screen.getByText('💊')).toBeInTheDocument(); // aviso de toma de medicación
+    expect(screen.getByText('💊')).toBeInTheDocument(); // receta con plan de toma
     expect(screen.getByText('❌')).toBeInTheDocument(); // turno cancelado
+  });
+
+  it('muestra al administrativo el aviso de receta emitida con su propio ícono', async () => {
+    api.get.mockResolvedValue([
+      {
+        id: 'n3',
+        tipo: 'receta_emitida',
+        mensaje: 'Martín Médico emitió una receta con plan de medicación para Paula Paciente. Tocá «Generar recordatorios» para que el paciente reciba su receta y el aviso de toma.',
+        leida: false,
+        creada_en: '2026-10-28T15:00:00',
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<CampanaNotificaciones />);
+
+    await user.click(await screen.findByRole('button', { name: 'Avisos, 1 sin leer' }));
+
+    expect(screen.getByText(/emitió una receta con plan de medicación para Paula Paciente/)).toBeInTheDocument();
+    expect(screen.getByText('📝')).toBeInTheDocument();
   });
 
   it('marca un aviso como leído y baja el contador', async () => {

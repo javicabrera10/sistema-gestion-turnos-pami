@@ -48,4 +48,6 @@ class Receta:
     fecha: datetime = field(default_factory=_ahora)
     # Cuándo empieza a contar el plan de medicación: al emitir la receta (o al cargar el plan si ya estaba emitida)
     inicio_plan: datetime | None = None
+    # Cuándo el administrativo generó el aviso de toma para el paciente (None = todavía está pendiente)
+    recordatorio_generado_en: datetime | None = None
     id: str | None = None

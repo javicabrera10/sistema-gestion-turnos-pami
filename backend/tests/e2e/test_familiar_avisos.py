@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from bson import ObjectId
 
 from app.patterns.canal_strategy import CanalSMS
 from app.services.recordatorio_service import ahora_local
@@ -167,12 +166,9 @@ def test_los_avisos_de_medicacion_no_llegan_al_familiar(client, app, h_paciente,
     autorizar()
     receta = {"paciente_id": _id_de(client, h_paciente), "medicamentos": [{"nombre": "Ibuprofeno", "dosis": "400 mg"}]}
     receta_id = client.post("/api/recetas", json=receta, headers=h_medico).get_json()["id"]
-    hace_cinco = (ahora_local() - timedelta(minutes=5)).strftime("%H:%M")
-    plan = {"plan": [{"medicamento": "Ibuprofeno", "dosis": "400 mg", "horarios": [hace_cinco], "duracion_dias": 5}]}
+    plan = {"plan": [{"medicamento": "Ibuprofeno", "dosis": "400 mg", "horarios": ["08:00"], "duracion_dias": 5}]}
     client.put(f"/api/recetas/{receta_id}/plan", json=plan, headers=h_medico)
     client.post(f"/api/recetas/{receta_id}/emitir", headers=h_medico)
-    dos_dias = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
-    app.db.recetas.update_one({"_id": ObjectId(receta_id)}, {"$set": {"inicio_plan": dos_dias}})
 
     assert client.post("/api/recordatorios/ejecutar", headers=h_admin).get_json()["tomas"] == 1
 

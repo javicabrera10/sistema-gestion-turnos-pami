@@ -2,7 +2,9 @@
 
 from bson.errors import InvalidId
 
+from app.models.receta import TipoReceta
 from app.patterns.observer import (
+    RECETA_EMITIDA,
     TURNO_CANCELADO,
     TURNO_CONFIRMADO,
     TURNO_OTORGADO,
@@ -45,11 +47,26 @@ def registrar_observers(app) -> None:
     def notificar_turno_rechazado(datos: dict) -> None:
         servicio().crear_respuesta_paciente(datos, aceptado=False, paciente_nombre=nombre_del_paciente(datos))
 
+    def notificar_receta_emitida(datos: dict) -> None:
+        """Avisa a los administrativos que hay una receta con plan de medicación para que generen el recordatorio."""
+        if datos.get("tipo") != TipoReceta.RECETA.value or not datos.get("con_plan"):
+            return  # las órdenes y las recetas sin plan no tienen nada que recordar
+        usuarios = UsuarioRepository(app.db)
+        try:
+            medico = usuarios.get_by_id(datos["medico_id"])
+        except InvalidId:
+            medico = None
+        medico_nombre = medico["nombre"] if medico else None
+        paciente_nombre = nombre_del_paciente(datos)
+        for administrativo in usuarios.listar_por_rol("administrativo"):
+            servicio().crear_receta_emitida(str(administrativo["_id"]), datos, medico_nombre, paciente_nombre)
+
     bus.suscribir(TURNO_OTORGADO, notificar_turno_otorgado)
     bus.suscribir(TURNO_REPROGRAMADO, notificar_turno_reprogramado)
     bus.suscribir(TURNO_CANCELADO, notificar_turno_cancelado)
     bus.suscribir(TURNO_CONFIRMADO, notificar_turno_confirmado)
     bus.suscribir(TURNO_RECHAZADO, notificar_turno_rechazado)
+    bus.suscribir(RECETA_EMITIDA, notificar_receta_emitida)
 
     def avisar_al_familiar(evento: str):
         """Observer que le avisa al familiar autorizado del paciente cuando pasa `evento` con uno de sus turnos."""
