@@ -33,7 +33,8 @@ describe('MisRecetas', () => {
     api.get.mockResolvedValue([RECETA]);
     renderPagina();
 
-    expect(await screen.findByText('Ibuprofeno', { selector: 'strong' })).toBeInTheDocument();
+    // el medicamento aparece dos veces: en la lista de medicamentos y en el plan de toma
+    expect(await screen.findAllByText('Ibuprofeno', { selector: 'strong' })).toHaveLength(2);
     expect(api.get).toHaveBeenCalledWith('/recetas/mias');
     expect(screen.getByText(/a las 08:00, 20:00 hs durante 5 días/)).toBeInTheDocument();
     expect(screen.getByText(/Indicaciones: Después de las comidas/)).toBeInTheDocument();

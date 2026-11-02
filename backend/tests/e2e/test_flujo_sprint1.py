@@ -76,7 +76,7 @@ def test_flujo_completo_solicitar_otorgar_notificar_y_confirmar(client, h_pacien
     assert resp.get_json()["estado"] == "confirmado"
 
 
-def test_flujo_recetas_crear_plan_y_emitir(client, h_paciente, h_medico):
+def test_flujo_recetas_crear_plan_y_emitir(client, h_paciente, h_medico, h_admin):
     paciente_id = _id_de(client, h_paciente)
     receta = client.post(
         "/api/recetas",
@@ -88,7 +88,11 @@ def test_flujo_recetas_crear_plan_y_emitir(client, h_paciente, h_medico):
     assert client.put(f"/api/recetas/{receta['id']}/plan", json=plan, headers=h_medico).status_code == 200
     assert client.post(f"/api/recetas/{receta['id']}/emitir", headers=h_medico).get_json()["estado"] == "emitida"
 
-    # el paciente la recibe; en las rutas del médico recibe 403
+    # con plan de medicación, el paciente no la ve hasta que el administrativo genera los recordatorios
+    assert client.get("/api/recetas/mias", headers=h_paciente).get_json() == []
+    assert client.post("/api/recordatorios/ejecutar", headers=h_admin).status_code == 200
+
+    # ahora sí la recibe; en las rutas del médico recibe 403
     assert len(client.get("/api/recetas/mias", headers=h_paciente).get_json()) == 1
     assert client.post(f"/api/recetas/{receta['id']}/emitir", headers=h_paciente).status_code == 403
 
