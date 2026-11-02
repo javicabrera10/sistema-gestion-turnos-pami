@@ -2,11 +2,31 @@
 
 TP Integrador de Programación II (IES 9-023 CESIT). Stack: Flask, MongoDB, React.
 
+## Estructura del proyecto
+
+```
+sistema-gestion-turnos-pami/
+├── backend/          API en Flask
+│   ├── app/          routes, services, repositories, patterns
+│   ├── scripts/      init_db y utilidades
+│   ├── tests/
+│   ├── run.py
+│   ├── pyproject.toml
+│   └── .env.example
+├── docs/             documentación técnica
+│   ├── PATRONES.md
+│   ├── SEGURIDAD.md
+│   └── WIRESHARK.md
+├── frontend/         app en React
+├── cert.pem          certificado TLS
+└── key.pem           clave privada TLS
+```
+
 ## Backend
 
 1. Levantar MongoDB:
    `docker run -d -p 27017:27017 --name mongo-pami -v mongo-pami-data:/data/db mongo:4`
-2. Configurar el entorno:
+2. Configurar el entorno (ejecutar en PowerShell):
    ```
    cd backend
    Copy-Item .env.example .env
@@ -30,10 +50,25 @@ TP Integrador de Programación II (IES 9-023 CESIT). Stack: Flask, MongoDB, Reac
 
 `routes` (endpoints) → `services` (lógica de negocio) → `repositories` (acceso a MongoDB).
 
-Patrones: **State** (`patterns/turno_state.py`, estados del turno), **Observer** (`patterns/observer.py` y
-`observers.py`, bus de eventos), **Factory** (`patterns/documento_factory.py`, receta u orden).
+### Patrones de diseño
 
-## Endpoints del Sprint 1
+- **State** (`patterns/turno_state.py`): estados del turno.
+- **Observer** (`patterns/observer.py` y `observers.py`): bus de eventos.
+- **Factory** (`patterns/documento_factory.py`): receta u orden.
+- **Strategy** (`patterns/canal_strategy.py`): envío de notificaciones y avisos por distintos canales.
+
+Detalle de cada patrón: [`docs/PATRONES.md`](docs/PATRONES.md)
+
+## Seguridad y análisis de tráfico (Sprint 3)
+
+Se implementó y validó el cifrado de la comunicación entre el cliente y el backend mediante HTTPS / TLS:
+
+- Configuración dinámica de SSL/TLS mediante certificados (`cert.pem` y `key.pem`).
+- Análisis comparativo de capturas de paquetes con Wireshark: exposición en texto plano en HTTP vs. cifrado binario en HTTPS.
+
+Documentación técnica: [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md) y [`docs/WIRESHARK.md`](docs/WIRESHARK.md)
+
+## Endpoints
 
 Todos están documentados y se pueden probar en Swagger (`/apidocs`). Salvo login y registro, piden token.
 
@@ -59,8 +94,7 @@ Todos están documentados y se pueden probar en Swagger (`/apidocs`). Salvo logi
 
 Flujo del turno: `solicitado → otorgado → confirmado | rechazado`.
 
-Los permisos se validan en el servidor con `roles_required`. Si un médico o un paciente intenta usar una ruta de
-otro rol recibe 403; si pide un recurso ajeno (receta de otro médico, turno de otro paciente) recibe 404.
+Los permisos se validan en el servidor con `roles_required`. Si un médico o un paciente intenta usar una ruta de otro rol recibe 403; si pide un recurso ajeno (receta de otro médico, turno de otro paciente) recibe 404.
 
 ## Eventos (Observer)
 
